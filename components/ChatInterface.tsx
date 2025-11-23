@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Message, ChatResponse, Segment } from '../types';
 import { Mic, Send, Volume2, Lightbulb, StopCircle, Eye, EyeOff, Languages, ChevronRight } from 'lucide-react';
@@ -32,7 +33,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
     const logVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
-        // console.log("Voices loaded");
+        // console.log("Voices loaded", voices.map(v => v.name));
       }
     };
     window.speechSynthesis.onvoiceschanged = logVoices;
@@ -150,27 +151,27 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
   const getBestVoice = (voices: SpeechSynthesisVoice[]) => {
     const zhVoices = voices.filter(v => v.lang.toLowerCase().includes('zh'));
     
-    // Priority 1: Microsoft Edge Natural Voices (Taiwan)
+    // Priority 1: Microsoft Edge Natural Voices (Taiwan) - Best quality overall
     const msNaturalTw = zhVoices.find(v => 
       v.name.includes('HsiaoChen') || v.name.includes('YunJhe')
     );
     if (msNaturalTw) return msNaturalTw;
 
-    // Priority 2: Google Chrome Standard Voice (Taiwan)
+    // Priority 2: Apple Mei-Jia (macOS) - Better than Google Standard on Mac
+    const appleTw = zhVoices.find(v => v.name.includes('Mei-Jia'));
+    if (appleTw) return appleTw;
+
+    // Priority 3: Google Chrome Standard Voice (Taiwan)
     const googleTw = zhVoices.find(v => 
       v.name.includes('Google') && (v.lang.includes('TW') || v.name.includes('台灣'))
     );
     if (googleTw) return googleTw;
 
-    // Priority 3: Microsoft Online
+    // Priority 4: Microsoft Online
     const msOnline = zhVoices.find(v => 
       v.name.includes('Microsoft') && v.name.includes('Online')
     );
     if (msOnline) return msOnline;
-
-    // Priority 4: Apple
-    const appleTw = zhVoices.find(v => v.name.includes('Mei-Jia'));
-    if (appleTw) return appleTw;
     
     // Priority 5: Fallback
     const stdTw = zhVoices.find(v => v.lang === 'zh-TW' || v.lang === 'zh_TW');
@@ -190,10 +191,17 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
 
     if (bestVoice) {
       utterance.voice = bestVoice;
+      
+      // Smart Rate Adjustment
+      // Natural voices (Edge/Online) sound good when slow (0.9).
+      // Standard system voices (Google/Apple) sound robotic/stretched if slowed down, so keep them at 1.0.
+      const isNatural = bestVoice.name.includes('Natural') || bestVoice.name.includes('Online');
+      utterance.rate = isNatural ? 0.9 : 1.0; 
+    } else {
+       utterance.lang = 'zh-TW';
+       utterance.rate = 1.0;
     }
     
-    utterance.lang = bestVoice ? bestVoice.lang : 'zh-TW';
-    utterance.rate = 0.9; 
     utterance.pitch = 1.0;
 
     utterance.onstart = () => setIsPlaying(true);
