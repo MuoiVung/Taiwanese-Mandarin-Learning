@@ -1,0 +1,7 @@
+{
+  "name": "Taiwanese Mandarin Learning",
+  "description": "A friendly AI companion for practicing Taiwanese Mandarin (Traditional Chinese) communication reflexes from A1 to C2.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
