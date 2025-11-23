@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Topic, TOCFLLevel } from '../types';
-import { MessageSquare, Loader2 } from 'lucide-react';
+import { MessageSquare, Loader2, Sparkles } from 'lucide-react';
 
 interface Props {
   level: TOCFLLevel;
@@ -11,46 +12,57 @@ interface Props {
 
 export const TopicSelector: React.FC<Props> = ({ level, topics, isLoading, onSelect }) => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 animate-in slide-in-from-bottom-4 duration-500 w-full">
-      <div className="mb-6 md:mb-8 text-center">
-        <span className="px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-sm font-medium mb-4 inline-block">
-          Level {level}
-        </span>
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">Chọn chủ đề hội thoại</h2>
-        <p className="text-slate-600">Chúng ta sẽ nói về chủ đề gì?</p>
-      </div>
+    <div className="h-full overflow-y-auto p-6 md:p-10 w-full">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-10 text-center md:text-left">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium mb-4">
+            <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+            Current Level: {level}
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-2">Chủ đề hội thoại</h2>
+          <p className="text-lg text-slate-600">Chọn một tình huống để bắt đầu luyện tập phản xạ.</p>
+        </div>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center text-slate-400">
-          <Loader2 className="animate-spin mb-2" size={32} />
-          <p>Đang tìm chủ đề phù hợp...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 w-full max-w-md">
-          {topics.map((topic) => (
-            <button
-              key={topic.id}
-              onClick={() => onSelect(topic)}
-              className="flex items-start p-4 md:p-6 bg-white border-2 border-slate-100 rounded-xl hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all text-left group w-full"
-            >
-              <div className="flex-shrink-0 mt-1">
-                <MessageSquare className="text-teal-500 mr-4 group-hover:scale-110 transition-transform" size={24} />
-              </div>
-              <div className="flex flex-col gap-1">
-                <h3 className="font-bold text-lg md:text-xl text-slate-800 leading-tight">
-                  {topic.title}
-                </h3>
-                <div className="font-medium text-teal-700 text-base md:text-lg">
-                  {topic.vietnamese_title}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400 bg-white rounded-3xl border border-dashed border-slate-200">
+            <Loader2 className="animate-spin mb-4 text-teal-500" size={48} />
+            <p className="text-lg font-medium text-slate-600">Đang tìm chủ đề phù hợp với Level {level}...</p>
+            <p className="text-sm">AI đang phân tích văn hóa Đài Loan để gợi ý cho bạn.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {topics.map((topic) => (
+              <button
+                key={topic.id}
+                onClick={() => onSelect(topic)}
+                className="group flex flex-col h-full bg-white border border-slate-200 rounded-2xl p-6 hover:border-teal-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <MessageSquare size={80} className="text-teal-500 rotate-12 transform translate-x-4 -translate-y-4" />
                 </div>
-                <p className="text-sm text-slate-500 mt-1 italic">
-                  "{topic.description}"
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+
+                <div className="mb-4 relative z-10">
+                   <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mb-4 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                      <Sparkles size={24} />
+                   </div>
+                   <h3 className="font-bold text-xl text-slate-900 mb-1 leading-tight group-hover:text-teal-700 transition-colors">
+                    {topic.title}
+                  </h3>
+                  <div className="text-lg text-teal-600 font-medium mb-3">
+                    {topic.vietnamese_title}
+                  </div>
+                </div>
+                
+                <div className="mt-auto pt-4 border-t border-slate-100 relative z-10">
+                  <p className="text-sm text-slate-500 italic">
+                    "{topic.description}"
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

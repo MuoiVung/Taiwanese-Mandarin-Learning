@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Message, ChatResponse } from '../types';
 import { Mic, Send, Volume2, Lightbulb, StopCircle } from 'lucide-react';
@@ -166,14 +167,13 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
 
     if (bestVoice) {
       utterance.voice = bestVoice;
-      // console.log(`Using voice: ${bestVoice.name} (${bestVoice.lang})`);
     }
     
     // Ensure the lang is set to the voice's lang or default to zh-TW
     utterance.lang = bestVoice ? bestVoice.lang : 'zh-TW';
     
     // 3. Natural Rate
-    utterance.rate = 0.9; // Slightly slower than 1.0 for clarity, but not robot-slow
+    utterance.rate = 0.9; 
     utterance.pitch = 1.0;
 
     utterance.onstart = () => setIsPlaying(true);
@@ -192,9 +192,9 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative w-full">
+    <div className="flex flex-col h-full bg-slate-50 relative w-full overflow-hidden">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-6 pb-24">
+      <div className="flex-1 overflow-y-auto px-4 py-6 md:p-8 space-y-8 pb-32 w-full max-w-5xl mx-auto">
         {messages.map((msg) => {
           const isAi = msg.sender === 'ai';
           const content = msg.content;
@@ -202,44 +202,49 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
           if (isAi && typeof content !== 'string') {
             const aiContent = content as ChatResponse;
             return (
-              <div key={msg.id} className="flex flex-col items-start w-full max-w-[100%] sm:max-w-[90%]">
-                <div className="bg-white rounded-2xl rounded-tl-none p-4 shadow-md border border-slate-100 text-slate-800 w-full">
+              <div key={msg.id} className="flex flex-col items-start w-full">
+                {/* AI Avatar or Identifier */}
+                <div className="text-xs font-bold text-slate-400 mb-1 ml-1 uppercase tracking-wider">TW Companion</div>
+                
+                <div className="bg-white rounded-2xl rounded-tl-none p-5 md:p-6 shadow-md border border-slate-100 text-slate-800 w-full max-w-3xl">
                    {/* Feedback Section */}
                    {aiContent.feedback && (
-                    <div className="mb-3 pb-2 border-b border-slate-100 text-sm text-slate-500 italic">
-                      <span className="font-semibold text-teal-600 mr-1">Feedback:</span>
+                    <div className="mb-4 pb-3 border-b border-slate-100 text-sm md:text-base text-slate-500 italic bg-amber-50/50 -mx-5 md:-mx-6 -mt-5 md:-mt-6 p-5 md:p-6 rounded-t-2xl">
+                      <span className="font-semibold text-amber-600 mr-2">Feedback:</span>
                       {aiContent.feedback}
                     </div>
                   )}
 
                   {/* Main Script */}
-                  <div className="flex items-start gap-3 mb-2">
-                    <h3 className="text-lg sm:text-xl font-bold font-serif text-slate-900 leading-relaxed flex-1">
+                  <div className="flex items-start gap-4 mb-3">
+                    <h3 className="text-xl md:text-2xl font-bold font-serif text-slate-900 leading-relaxed flex-1">
                       {aiContent.script}
                     </h3>
                     <button 
                       onClick={() => isPlaying ? stopAudio() : playAudio(aiContent.script)}
-                      className="shrink-0 p-2 rounded-full bg-slate-100 text-teal-600 hover:bg-teal-100 transition-colors"
+                      className="shrink-0 p-3 rounded-full bg-slate-100 text-teal-600 hover:bg-teal-100 transition-colors shadow-sm"
                       title="Play Audio"
                     >
-                      {isPlaying ? <StopCircle size={20} className="animate-pulse" /> : <Volume2 size={20} />}
+                      {isPlaying ? <StopCircle size={24} className="animate-pulse" /> : <Volume2 size={24} />}
                     </button>
                   </div>
                   
                   {/* Pinyin */}
-                  <p className="text-teal-600 font-medium text-sm sm:text-base mb-2">{aiContent.pinyin}</p>
+                  <p className="text-teal-600 font-medium text-base md:text-lg mb-2">{aiContent.pinyin}</p>
                   
                   {/* Translation */}
-                  <p className="text-slate-600 text-sm">{aiContent.translation}</p>
+                  <p className="text-slate-600 text-sm md:text-base">{aiContent.translation}</p>
 
                   {/* Suggestion (Optional) */}
                   {aiContent.suggestion && (
-                    <div className="mt-3 pt-2 border-t border-dashed border-slate-200">
-                      <div className="flex items-center gap-1 text-xs text-amber-600 font-medium mb-1">
-                        <Lightbulb size={12} />
-                        <span>Gợi ý trả lời:</span>
+                    <div className="mt-4 pt-3 border-t border-dashed border-slate-200">
+                      <div className="flex items-center gap-2 text-xs text-amber-600 font-bold uppercase tracking-wider mb-2">
+                        <Lightbulb size={14} />
+                        <span>Gợi ý trả lời</span>
                       </div>
-                      <p className="text-slate-500 text-sm italic">{aiContent.suggestion}</p>
+                      <p className="text-slate-600 text-sm md:text-base italic bg-slate-50 p-3 rounded-lg border border-slate-100 inline-block">
+                        "{aiContent.suggestion}"
+                      </p>
                     </div>
                   )}
                 </div>
@@ -248,8 +253,8 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
           } else {
             return (
               <div key={msg.id} className="flex justify-end w-full">
-                <div className="bg-teal-600 text-white rounded-2xl rounded-tr-none px-4 py-3 shadow-md max-w-[85%] sm:max-w-[80%] word-break-break-word">
-                  <p className="text-base">{typeof content === 'string' ? content : ''}</p>
+                <div className="bg-teal-600 text-white rounded-2xl rounded-tr-none px-6 py-4 shadow-md max-w-[85%] md:max-w-2xl word-break-break-word">
+                  <p className="text-base md:text-lg leading-relaxed">{typeof content === 'string' ? content : ''}</p>
                 </div>
               </div>
             );
@@ -267,11 +272,11 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
       </div>
 
       {/* Input Area */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-2 sm:p-4 z-20">
-        <div className="max-w-3xl mx-auto flex items-end gap-2">
+      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 md:p-6 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="max-w-4xl mx-auto flex items-end gap-3 md:gap-4">
           <button
             onClick={toggleListening}
-            className={`p-3 rounded-full transition-all shrink-0 ${
+            className={`p-4 rounded-full transition-all shrink-0 ${
               isListening 
                 ? 'bg-red-100 text-red-600 animate-pulse ring-2 ring-red-400' 
                 : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -280,22 +285,22 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
             <Mic size={24} />
           </button>
           
-          <div className="flex-1 bg-slate-100 rounded-2xl px-4 py-3 flex items-center focus-within:ring-2 focus-within:ring-teal-500 transition-all">
+          <div className="flex-1 bg-slate-100 rounded-2xl px-5 py-3 flex items-center focus-within:ring-2 focus-within:ring-teal-500 transition-all border border-transparent focus-within:border-teal-500 focus-within:bg-white">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Nhập..."
+              placeholder="Nhập tin nhắn..."
               rows={1}
-              className="w-full bg-transparent border-none focus:outline-none resize-none max-h-32 text-slate-800 placeholder-slate-400 text-base"
-              style={{ minHeight: '24px' }}
+              className="w-full bg-transparent border-none focus:outline-none resize-none max-h-32 text-slate-800 placeholder-slate-400 text-base md:text-lg"
+              style={{ minHeight: '28px' }}
             />
           </div>
 
           <button
             onClick={handleSend}
             disabled={!input.trim() || isProcessing}
-            className="p-3 bg-teal-600 text-white rounded-full hover:bg-teal-700 disabled:opacity-50 disabled:hover:bg-teal-600 transition-all shadow-lg shadow-teal-200 shrink-0"
+            className="p-4 bg-teal-600 text-white rounded-xl hover:bg-teal-700 disabled:opacity-50 disabled:hover:bg-teal-600 transition-all shadow-lg shadow-teal-100 shrink-0 flex items-center justify-center"
           >
             <Send size={24} />
           </button>

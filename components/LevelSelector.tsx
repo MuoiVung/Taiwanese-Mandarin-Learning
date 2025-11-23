@@ -1,48 +1,61 @@
+
 import React from 'react';
 import { TOCFLLevel } from '../types';
-import { GraduationCap, Signal } from 'lucide-react';
+import { GraduationCap, Signal, ArrowRight } from 'lucide-react';
 
 interface Props {
   onSelect: (level: TOCFLLevel) => void;
 }
 
-const levels: { code: TOCFLLevel; label: string; desc: string }[] = [
-  { code: 'A1', label: 'Nhập môn', desc: 'Sơ cấp 1 - Chào hỏi, mua sắm cơ bản' },
-  { code: 'A2', label: 'Cơ bản', desc: 'Sơ cấp 2 - Giao tiếp đời sống hàng ngày' },
-  { code: 'B1', label: 'Trung cấp 1', desc: 'Tiến cấp 1 - Du lịch, công việc đơn giản' },
-  { code: 'B2', label: 'Trung cấp 2', desc: 'Tiến cấp 2 - Thảo luận, bày tỏ ý kiến' },
-  { code: 'C1', label: 'Cao cấp 1', desc: 'Cao cấp 1 - Chủ đề chuyên sâu' },
-  { code: 'C2', label: 'Cao cấp 2', desc: 'Cao cấp 2 - Thông thạo như người bản xứ' },
+const levels: { code: TOCFLLevel; label: string; desc: string; color: string }[] = [
+  { code: 'A1', label: 'Nhập môn', desc: 'Chào hỏi, mua sắm cơ bản, số đếm', color: 'bg-emerald-100 text-emerald-700' },
+  { code: 'A2', label: 'Cơ bản', desc: 'Giao tiếp đời sống hàng ngày, chỉ đường', color: 'bg-teal-100 text-teal-700' },
+  { code: 'B1', label: 'Trung cấp 1', desc: 'Du lịch, công việc đơn giản, sở thích', color: 'bg-cyan-100 text-cyan-700' },
+  { code: 'B2', label: 'Trung cấp 2', desc: 'Thảo luận ý kiến, văn hóa, xã hội', color: 'bg-sky-100 text-sky-700' },
+  { code: 'C1', label: 'Cao cấp 1', desc: 'Chủ đề chuyên sâu, tin tức, kinh tế', color: 'bg-blue-100 text-blue-700' },
+  { code: 'C2', label: 'Cao cấp 2', desc: 'Thông thạo, tranh luận, văn học', color: 'bg-indigo-100 text-indigo-700' },
 ];
 
 export const LevelSelector: React.FC<Props> = ({ onSelect }) => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 animate-in fade-in zoom-in duration-500">
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-100 text-teal-600 mb-4">
-          <GraduationCap size={32} />
+    <div className="h-full overflow-y-auto p-6 md:p-10 w-full">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-10 text-center md:text-left">
+          <div className="inline-flex items-center justify-center p-3 rounded-xl bg-teal-100 text-teal-700 mb-4 shadow-sm">
+            <GraduationCap size={28} />
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 mb-2">Chọn trình độ của bạn</h1>
+          <p className="text-lg text-slate-600 max-w-2xl">
+            Hãy chọn cấp độ phù hợp để AI có thể điều chỉnh từ vựng và tốc độ nói chuyện tốt nhất cho bạn.
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">Chào bạn! Ní hǎo!</h1>
-        <p className="text-slate-600">Bạn muốn luyện tập ở trình độ nào hôm nay?</p>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-        {levels.map((lvl) => (
-          <button
-            key={lvl.code}
-            onClick={() => onSelect(lvl.code)}
-            className="flex items-center p-4 bg-white border-2 border-slate-100 rounded-xl hover:border-teal-500 hover:bg-teal-50 transition-all shadow-sm group text-left"
-          >
-            <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 font-bold text-xl group-hover:bg-teal-500 group-hover:text-white transition-colors">
-              {lvl.code}
-            </div>
-            <div className="ml-4">
-              <h3 className="font-semibold text-slate-800">{lvl.label}</h3>
-              <p className="text-xs text-slate-500">{lvl.desc}</p>
-            </div>
-            <Signal className="ml-auto text-slate-300 group-hover:text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity" size={20} />
-          </button>
-        ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {levels.map((lvl) => (
+            <button
+              key={lvl.code}
+              onClick={() => onSelect(lvl.code)}
+              className="group relative flex flex-col p-6 bg-white border border-slate-200 rounded-2xl hover:border-teal-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-left h-full"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className={`flex items-center justify-center w-14 h-14 rounded-xl ${lvl.color} font-bold text-xl`}>
+                  {lvl.code}
+                </div>
+                <Signal className="text-slate-200 group-hover:text-teal-500 transition-colors" size={24} />
+              </div>
+              
+              <div className="mb-4 flex-1">
+                <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-teal-700 transition-colors">{lvl.label}</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">{lvl.desc}</p>
+              </div>
+
+              <div className="flex items-center text-teal-600 font-medium text-sm opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all">
+                <span>Chọn cấp độ này</span>
+                <ArrowRight size={16} className="ml-2" />
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
