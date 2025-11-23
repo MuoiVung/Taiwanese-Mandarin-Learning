@@ -1,3 +1,4 @@
+
 export enum AppStage {
   LEVEL_SELECTION = 'LEVEL_SELECTION',
   TOPIC_GENERATION = 'TOPIC_GENERATION',
@@ -12,6 +13,9 @@ export interface VocabularyItem {
   chinese: string;
   pinyin: string;
   vietnamese: string;
+  example: string;          // New: Example sentence
+  example_pinyin: string;   // New: Pinyin for example
+  example_meaning: string;  // New: Meaning of example
 }
 
 export interface Segment {

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { TOCFLLevel, VocabularyItem, ChatResponse, Topic } from "../types";
 
@@ -8,18 +9,71 @@ const SYSTEM_INSTRUCTION = `
 You are a friendly, patient Taiwanese Mandarin Conversation Partner (Female, ~25-30 years old).
 Your goal is to help Vietnamese users practice speaking reflexes from A1 to C2.
 
-CRITICAL INSTRUCTIONS FOR TONE AND STYLE:
-1. **Natural & Authentic**: Speak like a real person chatting with a friend. Avoid "textbook" phrasing, but do not be overly slangy.
-2. **Particles (語助詞)**: Use Taiwanese particles (喔, 啦, 耶, 捏, 齁, 吧) *only when necessary* to express emotion, soften the tone, or show intimacy.
-   - **DO NOT** force a particle at the end of every sentence. Use them sparingly and naturally.
-3. **Concise & Direct**: Keep responses short, clear, and useful. Avoid long, complex monologues unless the C1/C2 level requires it.
-4. **Vocabulary**: Strictly use Taiwan-specific terms (e.g., 公車, 計程車, 捷運, 禮拜, 或是).
-5. **Traditional Chinese**: Always use 繁體中文.
+CRITICAL INSTRUCTIONS FOR TONE AND STYLE (AI PERSONA):
+
+1. **Natural & Authentic (Casual/Semi-Formal)**:
+   - Speak like a normal Taiwanese friend. Polite but not stiff/textbook.
+   - Use daily life vocabulary (e.g., use "禮拜" instead of "星期", "我也覺得" instead of "本人認為", "計程車" instead of "出租車").
+   - **Traditional Chinese (繁體中文)** ONLY.
+
+2. **Modal Particles (語助詞) - "LESS IS MORE"**:
+   - **DO NOT** add a particle to the end of every sentence. It sounds fake and robotic.
+   - Use them *only* for specific nuances:
+     * **喔 (o)**: Soft reminder or realization (e.g., "這樣不行喔").
+     * **啦 (la)**: Explaining, slight impatience, or urging (e.g., "是這樣啦").
+     * **耶 (ye)**: Surprise or happiness (e.g., "很好吃耶").
+     * **吧 (ba)**: Uncertainty or suggestion.
+   - **AVOID**: Overusing "捏 (ne)" (unless acting very cutesy/whiny, which is rarely needed).
+
+3. **Conversation Logic**:
+   - **Concise First**: Get to the point. Answer the question or react directly first.
+   - **Don't Lecture**: Avoid long paragraphs unless the user asks for a deep explanation (C1/C2).
+   - **Flow**: Keep it conversational, not like a robot reading a script.
 
 The user is Vietnamese.
 `;
 
 const modelId = "gemini-2.5-flash";
+
+// Topic Banks Definition
+const TOPIC_BANKS: Record<string, string[]> = {
+  'A1_A2': [
+    'Survival: Ordering food (Bubble tea, Hotpot, Chicken rice), Shopping (Bargaining, Asking size)',
+    'Survival: Asking for directions, Renting a house, Seeing a doctor',
+    'Daily Life: Family, Personal hobbies, A day at school/work',
+    'Culture: Night markets, Mid-Autumn Festival, Garbage collection culture, Queuing culture'
+  ],
+  'B1_B2': [
+    'Emotions: Complaining about work, Sharing joy, Relationship advice, Life stress',
+    'Travel: Round-island trip (Hualien, Kenting), Camping, Hiking (Yangmingshan)',
+    'Society: Housing prices, Social media trends, Office culture/environment'
+  ],
+  'C1_C2': [
+    'Deep/Specialized: Semiconductor economy (TSMC), Socio-politics',
+    'Deep/Specialized: Climate change, AI future',
+    'Abstract: Life philosophy, Gender equality, Future of education'
+  ]
+};
+
+const getTopicPromptForLevel = (level: TOCFLLevel): string => {
+  let bankKey = 'A1_A2';
+  if (level === 'B1' || level === 'B2') bankKey = 'B1_B2';
+  if (level === 'C1' || level === 'C2') bankKey = 'C1_C2';
+  
+  const categories = TOPIC_BANKS[bankKey];
+  // Select 3 random categories or mix them to ensure variety
+  return `
+    Generate 3 distinct conversation topics for TOCFL Level ${level} in a Taiwanese context.
+    
+    You MUST select topics from these categories to ensure variety:
+    ${categories.join('\n')}
+    
+    Requirements:
+    1. Title should include Chinese and Pinyin.
+    2. Vietnamese Title must be a natural translation.
+    3. Ensure the topics are diverse (don't give 3 food topics).
+  `;
+};
 
 export const generateTopics = async (level: TOCFLLevel): Promise<Topic[]> => {
   const schema: Schema = {
@@ -36,17 +90,7 @@ export const generateTopics = async (level: TOCFLLevel): Promise<Topic[]> => {
     },
   };
 
-  const prompt = `
-    Generate 3 conversation topics suitable for a student at TOCFL Level ${level} in a Taiwanese context.
-    
-    Requirements:
-    1. Title should include Chinese and Pinyin.
-    2. Vietnamese Title must be a natural translation.
-    
-    Examples for A1: Buying bubble tea (Mai zhenzhu naicha), Night market.
-    Examples for C1: Economy, Climate Change, Corporate Culture.
-    Return JSON.
-  `;
+  const prompt = getTopicPromptForLevel(level);
 
   try {
     const response = await ai.models.generateContent({
@@ -82,15 +126,22 @@ export const generateVocabulary = async (level: TOCFLLevel, topic: string): Prom
         chinese: { type: Type.STRING, description: "Traditional Chinese characters" },
         pinyin: { type: Type.STRING, description: "Full pinyin with tones" },
         vietnamese: { type: Type.STRING, description: "Vietnamese meaning" },
+        example: { type: Type.STRING, description: "A complete example sentence using this word in Taiwanese context" },
+        example_pinyin: { type: Type.STRING, description: "Pinyin for the example sentence" },
+        example_meaning: { type: Type.STRING, description: "Vietnamese meaning of the example sentence" },
       },
-      required: ["chinese", "pinyin", "vietnamese"],
+      required: ["chinese", "pinyin", "vietnamese", "example", "example_pinyin", "example_meaning"],
     },
   };
 
   const prompt = `
     The user chose the topic: "${topic}" at Level ${level}.
-    List 5-7 most important vocabulary words or sentence patterns for this conversation.
-    Use Traditional Chinese.
+    List **10 to 15** most important vocabulary words or sentence patterns for this conversation.
+    
+    Requirements:
+    1. Use Traditional Chinese (Taiwanese usage).
+    2. Provide a practical example sentence for EACH word.
+    3. The example must be natural and related to the topic.
   `;
 
   try {
