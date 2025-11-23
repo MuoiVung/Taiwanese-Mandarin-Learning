@@ -192,9 +192,9 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative w-full overflow-hidden">
+    <div className="flex flex-col h-full bg-slate-50 w-full overflow-hidden">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 md:p-8 space-y-8 pb-32 w-full max-w-5xl mx-auto">
+      <div className="flex-1 overflow-y-auto px-4 py-6 md:p-8 space-y-8 w-full max-w-5xl mx-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
         {messages.map((msg) => {
           const isAi = msg.sender === 'ai';
           const content = msg.content;
@@ -272,7 +272,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
       </div>
 
       {/* Input Area */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 md:p-6 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      <div className="shrink-0 bg-white border-t border-slate-200 p-4 md:p-6 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <div className="max-w-4xl mx-auto flex items-end gap-3 md:gap-4">
           <button
             onClick={toggleListening}
