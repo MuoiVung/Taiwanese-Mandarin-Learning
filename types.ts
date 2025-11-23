@@ -14,11 +14,18 @@ export interface VocabularyItem {
   vietnamese: string;
 }
 
+export interface Segment {
+  text: string;      // The Chinese word/phrase
+  pinyin: string;    // Pinyin for this specific word
+  meaning: string;   // Vietnamese meaning for this specific word
+}
+
 export interface ChatResponse {
   feedback: string;
   script: string;
   pinyin: string;
   translation: string;
+  segments: Segment[]; // Array of words for interactive clicking
   suggestion?: string;
 }
 

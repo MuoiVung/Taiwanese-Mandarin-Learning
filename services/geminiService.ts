@@ -129,22 +129,35 @@ export const sendChatMessage = async (
       },
       script: { 
         type: Type.STRING, 
-        description: "The AI's response in Traditional Chinese. Conversational, natural flow with proper punctuation." 
+        description: "The AI's response in Traditional Chinese. Conversational, natural flow." 
       },
       pinyin: { 
         type: Type.STRING, 
-        description: "Pinyin for the AI's response." 
+        description: "Full Pinyin for the AI's response." 
       },
       translation: { 
         type: Type.STRING, 
-        description: "Vietnamese translation of the AI's response." 
+        description: "Full Vietnamese translation of the AI's response." 
+      },
+      segments: {
+        type: Type.ARRAY,
+        description: "Break down the 'script' into individual words/phrases for interactive learning.",
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            text: { type: Type.STRING, description: "The specific Chinese word or phrase" },
+            pinyin: { type: Type.STRING, description: "Pinyin for this specific segment" },
+            meaning: { type: Type.STRING, description: "Vietnamese meaning for this specific segment" }
+          },
+          required: ["text", "pinyin", "meaning"]
+        }
       },
       suggestion: { 
         type: Type.STRING, 
-        description: "A short suggested response for the user to say next (optional, mostly for A1-A2)." 
+        description: "A short suggested response for the user to say next (optional)." 
       },
     },
-    required: ["feedback", "script", "pinyin", "translation"],
+    required: ["feedback", "script", "pinyin", "translation", "segments"],
   };
 
   const chat = ai.chats.create({
@@ -157,11 +170,10 @@ export const sendChatMessage = async (
       1. Analyze user input.
       2. **Feedback**: If there is a grammar/vocabulary error, gently correct it in 'feedback'. If it is natural, praise briefly.
       3. **Script**: Respond naturally to the context. 
-         - **Tone**: Casual but polite. Like a friend.
-         - **Flow**: Use commas and pauses naturally.
-         - **Particles**: Use them only if it feels right for the emotion (e.g., surprise, agreement). Do not overuse.
-      4. Provide 'pinyin' and 'translation' (Vietnamese).
-      5. **Engagement**: Always ask a follow-up question or give a prompt to keep the conversation moving.
+      4. **Segmentation**: You MUST break down your 'script' into the 'segments' array. Every character in the script must be covered by a segment.
+         Example: Script="今天天氣很好" -> segments=[{text:"今天", pinyin:"jīntiān", meaning:"hôm nay"}, {text:"天氣", pinyin:"tiānqì", meaning:"thời tiết"}, {text:"很好", pinyin:"hěn hǎo", meaning:"rất tốt"}]
+      5. Provide 'pinyin' and 'translation' for the full sentence.
+      6. **Engagement**: Always ask a follow-up question or give a prompt to keep the conversation moving.
       `,
       responseMimeType: "application/json",
       responseSchema: schema,
@@ -182,6 +194,21 @@ export const sendChatMessage = async (
       script: "哎呀，網絡好像有點卡住耶，再試一次好嗎？",
       pinyin: "Āiyā, wǎngluò hǎoxiàng yǒu diǎn kǎ zhù ye, zài shì yīcì hǎo ma?",
       translation: "Ui da, mạng có vẻ hơi lag nè, thử lại lần nữa được không?",
+      segments: [
+        { text: "哎呀", pinyin: "Āiyā", meaning: "Ui da" },
+        { text: "，", pinyin: "", meaning: "" },
+        { text: "網絡", pinyin: "wǎngluò", meaning: "mạng" },
+        { text: "好像", pinyin: "hǎoxiàng", meaning: "có vẻ" },
+        { text: "有點", pinyin: "yǒu diǎn", meaning: "hơi" },
+        { text: "卡住", pinyin: "kǎ zhù", meaning: "bị kẹt/lag" },
+        { text: "耶", pinyin: "ye", meaning: "nè" },
+        { text: "，", pinyin: "", meaning: "" },
+        { text: "再", pinyin: "zài", meaning: "lại" },
+        { text: "試", pinyin: "shì", meaning: "thử" },
+        { text: "一次", pinyin: "yīcì", meaning: "một lần" },
+        { text: "好嗎", pinyin: "hǎo ma", meaning: "được không" },
+        { text: "？", pinyin: "", meaning: "" }
+      ]
     };
   }
 };
