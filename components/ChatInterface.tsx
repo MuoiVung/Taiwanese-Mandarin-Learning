@@ -23,6 +23,27 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
+  // 1. Debug Voices: Log available voices to help user identify what's available
+  useEffect(() => {
+    const logVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        console.group("🎤 TTS Debug: Available Voices");
+        const zhVoices = voices.filter(v => v.lang.includes('zh'));
+        console.log("🇨🇳 All Chinese Voices:", zhVoices.map(v => `[${v.lang}] ${v.name} ${v.default ? '(Default)' : ''}`));
+        console.groupEnd();
+      }
+    };
+
+    // Chrome loads voices asynchronously
+    window.speechSynthesis.onvoiceschanged = logVoices;
+    logVoices();
+
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isProcessing]);
@@ -94,21 +115,59 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
     }
   };
 
+  // 2. Smart Voice Selection Logic
+  const getBestVoice = (voices: SpeechSynthesisVoice[]) => {
+    const zhVoices = voices.filter(v => v.lang.includes('zh'));
+    
+    // Priority 1: Google Voices (Often high quality on Android/Chrome)
+    // Prefer TW specific first, then any Chinese Google voice
+    const googleTw = zhVoices.find(v => v.name.includes('Google') && v.lang.includes('TW'));
+    if (googleTw) return googleTw;
+    
+    const googleAny = zhVoices.find(v => v.name.includes('Google'));
+    if (googleAny) return googleAny;
+
+    // Priority 2: Microsoft Online (High fidelity, natural)
+    const msOnline = zhVoices.find(v => v.name.includes('Microsoft') && v.name.includes('Online'));
+    if (msOnline) return msOnline;
+
+    // Priority 3: Apple / iOS (Mei-Jia is the standard high quality TW voice)
+    const appleTw = zhVoices.find(v => v.name.includes('Mei-Jia'));
+    if (appleTw) return appleTw;
+    
+    // Priority 4: Standard zh-TW
+    const stdTw = zhVoices.find(v => v.lang === 'zh-TW');
+    if (stdTw) return stdTw;
+
+    // Priority 5: Any Chinese fallback
+    return zhVoices[0];
+  };
+
   const playAudio = (text: string) => {
     window.speechSynthesis.cancel(); // Stop previous
+
     const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Try to find a Taiwan voice, fallback to any Chinese
     const voices = window.speechSynthesis.getVoices();
-    const twVoice = voices.find(v => v.lang === 'zh-TW') || voices.find(v => v.lang.startsWith('zh'));
-    if (twVoice) utterance.voice = twVoice;
+    const bestVoice = getBestVoice(voices);
+
+    if (bestVoice) {
+      utterance.voice = bestVoice;
+      // console.log(`Using voice: ${bestVoice.name} (${bestVoice.lang})`);
+    }
     
-    utterance.lang = 'zh-TW';
-    utterance.rate = 0.9; // Slightly slower for clearer learning
+    // Ensure the lang is set to the voice's lang or default to zh-TW
+    utterance.lang = bestVoice ? bestVoice.lang : 'zh-TW';
+    
+    // 3. Natural Rate
+    utterance.rate = 0.9; // Slightly slower than 1.0 for clarity, but not robot-slow
+    utterance.pitch = 1.0;
 
     utterance.onstart = () => setIsPlaying(true);
     utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
+    utterance.onerror = (e) => {
+        console.error("TTS Error:", e);
+        setIsPlaying(false);
+    };
 
     window.speechSynthesis.speak(utterance);
   };
@@ -145,11 +204,11 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                       {aiContent.script}
                     </h3>
                     <button 
-                      onClick={() => playAudio(aiContent.script)}
+                      onClick={() => isPlaying ? stopAudio() : playAudio(aiContent.script)}
                       className="shrink-0 p-2 rounded-full bg-slate-100 text-teal-600 hover:bg-teal-100 transition-colors"
                       title="Play Audio"
                     >
-                      <Volume2 size={20} />
+                      {isPlaying ? <StopCircle size={20} className="animate-pulse" /> : <Volume2 size={20} />}
                     </button>
                   </div>
                   
