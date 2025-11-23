@@ -58,54 +58,12 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
     }
   }, [messages]);
 
-  // Initialize Speech Recognition logic
+  // Cleanup speech recognition on unmount
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.lang = 'zh-TW';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-            setInput(transcript);
-        }
-        setIsListening(false);
-      };
-
-      recognition.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error);
-        setIsListening(false);
-        
-        // Handle specific errors for user feedback
-        if (event.error === 'not-allowed') {
-            alert("Lỗi: Trình duyệt không được cấp quyền truy cập Micro.\n\nTrên Mac: Vào System Settings > Privacy & Security > Microphone và cấp quyền cho trình duyệt.");
-        } else if (event.error === 'no-speech') {
-            // Silently fail or show toast
-        } else if (event.error === 'network') {
-            alert("Lỗi kết nối mạng. Vui lòng kiểm tra internet.");
-        }
-      };
-      
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    }
-
     return () => {
-        if (recognitionRef.current) {
-            recognitionRef.current.abort();
-        }
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
     };
   }, []);
 
@@ -125,24 +83,67 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
     }
   };
 
-  const toggleListening = () => {
-    window.speechSynthesis.cancel();
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
-    if (!recognitionRef.current) {
+    if (!SpeechRecognition) {
         alert("Trình duyệt của bạn không hỗ trợ nhập liệu bằng giọng nói. Vui lòng dùng Chrome hoặc Edge mới nhất.");
         return;
     }
 
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      try {
-        recognitionRef.current.start();
-      } catch (e) {
+    try {
+        // Create a fresh instance every time
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'zh-TW';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            setIsListening(true);
+        };
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            if (transcript) {
+                setInput(transcript);
+            }
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error("Speech recognition error", event.error);
+            setIsListening(false);
+            
+            if (event.error === 'not-allowed') {
+                alert("Lỗi: Trình duyệt không được cấp quyền truy cập Micro.\n\nTrên Mac: Vào System Settings > Privacy & Security > Microphone và cấp quyền cho trình duyệt.");
+            }
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+            recognitionRef.current = null;
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+    } catch (e) {
         console.error("Failed to start recognition:", e);
-        // Sometimes restarting the instance helps if it got stuck
         setIsListening(false);
-      }
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+        recognitionRef.current.stop();
+    }
+  };
+
+  const toggleListening = () => {
+    window.speechSynthesis.cancel();
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
     }
   };
 
@@ -292,12 +293,6 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                              onClick={(e) => {
                                e.stopPropagation();
                                setSelectedSegmentId(isSelected ? null : segmentId);
-                               if (!isSelected) {
-                                 // Optional: Play audio for individual word
-                                 // const u = new SpeechSynthesisUtterance(seg.text);
-                                 // u.lang = 'zh-TW';
-                                 // window.speechSynthesis.speak(u);
-                               }
                              }}
                            >
                              <span className="text-2xl md:text-3xl font-serif font-bold">
