@@ -29,7 +29,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
         console.group("🎤 TTS Debug: Available Voices");
-        const zhVoices = voices.filter(v => v.lang.includes('zh'));
+        const zhVoices = voices.filter(v => v.lang.toLowerCase().includes('zh'));
         console.log("🇨🇳 All Chinese Voices:", zhVoices.map(v => `[${v.lang}] ${v.name} ${v.default ? '(Default)' : ''}`));
         console.groupEnd();
       }
@@ -117,29 +117,43 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
 
   // 2. Smart Voice Selection Logic
   const getBestVoice = (voices: SpeechSynthesisVoice[]) => {
-    const zhVoices = voices.filter(v => v.lang.includes('zh'));
+    const zhVoices = voices.filter(v => v.lang.toLowerCase().includes('zh'));
     
-    // Priority 1: Google Voices (Often high quality on Android/Chrome)
-    // Prefer TW specific first, then any Chinese Google voice
-    const googleTw = zhVoices.find(v => v.name.includes('Google') && v.lang.includes('TW'));
-    if (googleTw) return googleTw;
-    
-    const googleAny = zhVoices.find(v => v.name.includes('Google'));
-    if (googleAny) return googleAny;
+    // Priority 1: Microsoft Edge Natural Voices (Taiwan)
+    // "HsiaoChen" is the female natural voice, "YunJhe" is male natural voice
+    const msNaturalTw = zhVoices.find(v => 
+      v.name.includes('HsiaoChen') || v.name.includes('YunJhe')
+    );
+    if (msNaturalTw) return msNaturalTw;
 
-    // Priority 2: Microsoft Online (High fidelity, natural)
-    const msOnline = zhVoices.find(v => v.name.includes('Microsoft') && v.name.includes('Online'));
+    // Priority 2: Google Chrome Standard Voice (Taiwan)
+    // Usually named "Google 國語 (台灣)" or "Google zh-TW"
+    const googleTw = zhVoices.find(v => 
+      v.name.includes('Google') && (v.lang.includes('TW') || v.name.includes('台灣'))
+    );
+    if (googleTw) return googleTw;
+
+    // Priority 3: Any Microsoft Online Voice (High Quality)
+    // Fallback for other MS voices if specific TW natural ones aren't found
+    const msOnline = zhVoices.find(v => 
+      v.name.includes('Microsoft') && v.name.includes('Online')
+    );
     if (msOnline) return msOnline;
 
-    // Priority 3: Apple / iOS (Mei-Jia is the standard high quality TW voice)
+    // Priority 4: iOS/macOS (Mei-Jia is the standard high quality TW voice)
     const appleTw = zhVoices.find(v => v.name.includes('Mei-Jia'));
     if (appleTw) return appleTw;
     
-    // Priority 4: Standard zh-TW
-    const stdTw = zhVoices.find(v => v.lang === 'zh-TW');
+    // Priority 5: Standard System TW Voice
+    const stdTw = zhVoices.find(v => v.lang === 'zh-TW' || v.lang === 'zh_TW');
     if (stdTw) return stdTw;
 
-    // Priority 5: Any Chinese fallback
+    // Priority 6: Fallback to CN voice if no TW voice exists
+    // Try to find a voice that might be female/neutral
+    const stdCn = zhVoices.find(v => v.lang === 'zh-CN' || v.lang === 'zh_CN');
+    if (stdCn) return stdCn;
+
+    // Last resort: Any Chinese voice
     return zhVoices[0];
   };
 
