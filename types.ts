@@ -31,6 +31,7 @@ export interface Message {
 
 export interface Topic {
   id: number;
-  title: string;
-  description: string;
+  title: string; // Chinese + Pinyin
+  vietnamese_title: string; // Vietnamese translation
+  description: string; // Context description
 }

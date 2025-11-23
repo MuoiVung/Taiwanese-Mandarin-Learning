@@ -5,10 +5,17 @@ const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
 const SYSTEM_INSTRUCTION = `
-You are a friendly and patient Taiwanese Mandarin Conversation Partner.
-Your goal is to help Vietnamese users practice speaking reflexes from A1 to C2 (TOCFL standards).
-You MUST use Traditional Chinese (繁體中文).
-You MUST use Taiwan-specific vocabulary and phrasing (e.g., 公車 gongche instead of 公交车, 計程車 jichengche instead of 出租车, 捷運 MRT).
+You are a friendly, enthusiastic, and patient Taiwanese Mandarin Conversation Partner (Female persona, roughly 25-30 years old).
+Your goal is to help Vietnamese users practice speaking reflexes from A1 to C2.
+
+CRITICAL INSTRUCTIONS FOR TONE AND STYLE:
+1. **Authentic Taiwanese Tone**: You MUST speak like a real Taiwanese person. Avoid stiff, textbook, or robotic language.
+2. **Particles (語助詞)**: You MUST abundantly use Taiwanese sentence-final particles to sound natural. Use: 喔 (o), 啦 (la), 耶 (ye), 捏 (ne), 齁 (ho), 吧 (ba), 嘿 (hei), 嘛 (ma).
+   - Example: "對啊！" -> "對啊对啊！" or "真的假的？！"
+   - Example: "很好" -> "很棒耶！" or "不錯喔！"
+3. **Vocabulary**: Strictly use Taiwan-specific terms (e.g., 公車 not 公交车, 計程車 not 出租车, 捷運 not 地铁, 或是 not 或者, 禮拜 not 星期).
+4. **Traditional Chinese**: Always use 繁體中文.
+
 The user is Vietnamese.
 `;
 
@@ -21,16 +28,22 @@ export const generateTopics = async (level: TOCFLLevel): Promise<Topic[]> => {
       type: Type.OBJECT,
       properties: {
         id: { type: Type.INTEGER },
-        title: { type: Type.STRING },
-        description: { type: Type.STRING },
+        title: { type: Type.STRING, description: "Topic title in Traditional Chinese + (Pinyin)" },
+        vietnamese_title: { type: Type.STRING, description: "Topic title translated to Vietnamese" },
+        description: { type: Type.STRING, description: "Short context description" },
       },
-      required: ["id", "title", "description"],
+      required: ["id", "title", "vietnamese_title", "description"],
     },
   };
 
   const prompt = `
     Generate 3 conversation topics suitable for a student at TOCFL Level ${level} in a Taiwanese context.
-    Examples for A1: Buying bubble tea, Night market, Asking MRT directions.
+    
+    Requirements:
+    1. Title should include Chinese and Pinyin.
+    2. Vietnamese Title must be a natural translation.
+    
+    Examples for A1: Buying bubble tea (Mai zhenzhu naicha), Night market.
     Examples for C1: Economy, Climate Change, Corporate Culture.
     Return JSON.
   `;
@@ -53,9 +66,9 @@ export const generateTopics = async (level: TOCFLLevel): Promise<Topic[]> => {
   } catch (error) {
     console.error("Error generating topics:", error);
     return [
-      { id: 1, title: "買珍珠奶茶", description: "Ordering Bubble Tea" },
-      { id: 2, title: "夜市", description: "Visiting a Night Market" },
-      { id: 3, title: "問路", description: "Asking for directions" },
+      { id: 1, title: "買珍珠奶茶 (Mǎi zhēnzhū nǎichá)", vietnamese_title: "Mua trà sữa trân châu", description: "Ordering typical Taiwanese drinks." },
+      { id: 2, title: "逛夜市 (Guàng yèshì)", vietnamese_title: "Đi dạo chợ đêm", description: "Talking about street food and games." },
+      { id: 3, title: "問路 (Wèn lù)", vietnamese_title: "Hỏi đường đi MRT", description: "Asking for directions in Taipei." },
     ];
   }
 };
@@ -116,7 +129,7 @@ export const sendChatMessage = async (
       },
       script: { 
         type: Type.STRING, 
-        description: "The AI's response in Traditional Chinese." 
+        description: "The AI's response in Traditional Chinese. MUST contain particles (喔, 啦, 耶) and sound very natural." 
       },
       pinyin: { 
         type: Type.STRING, 
@@ -142,10 +155,12 @@ export const sendChatMessage = async (
       
       Protocol:
       1. Analyze user input.
-      2. If grammar is wrong/unnatural, correct it in 'feedback'. If good, say 'Hao bang!'.
+      2. If grammar is wrong/unnatural, correct it in 'feedback'. If good, say 'Hao bang!' or 'Tai bang le!'.
       3. Respond naturally to continue the roleplay in 'script' (Traditional Chinese).
+         - IMPORTANT: Use particles (喔, 啦, 耶, 捏) to sound Taiwanese.
+         - Keep sentence length appropriate for Level ${level}.
       4. Provide 'pinyin' and 'translation' (Vietnamese).
-      5. Always ask open-ended questions to keep the conversation going.
+      5. Always ask open-ended questions or prompt the user to continue.
       `,
       responseMimeType: "application/json",
       responseSchema: schema,
@@ -163,9 +178,9 @@ export const sendChatMessage = async (
     console.error("Chat error:", error);
     return {
       feedback: "Lỗi kết nối",
-      script: "對不起，我現在有點問題。",
-      pinyin: "Duìbùqǐ, wǒ xiànzài yǒu diǎn wèntí.",
-      translation: "Xin lỗi, tôi đang gặp chút vấn đề.",
+      script: "哎呀，網絡好像有點卡住耶！再試一次好嗎？",
+      pinyin: "Āiyā, wǎngluò hǎoxiàng yǒu diǎn kǎ zhù ye! Zài shì yīcì hǎo ma?",
+      translation: "Ui da, mạng có vẻ hơi lag nè! Thử lại lần nữa được không?",
     };
   }
 };

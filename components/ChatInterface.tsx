@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Message, ChatResponse } from '../types';
-import { Mic, Send, Volume2, Lightbulb } from 'lucide-react';
+import { Mic, Send, Volume2, Lightbulb, StopCircle } from 'lucide-react';
 
 interface Props {
   messages: Message[];
@@ -19,12 +19,26 @@ declare global {
 export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendMessage }) => {
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isProcessing]);
+
+  // Auto-play functionality
+  useEffect(() => {
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.sender === 'ai' && typeof lastMsg.content !== 'string') {
+      const content = lastMsg.content as ChatResponse;
+      // Short timeout to ensure UI is rendered and doesn't conflict with incoming sound
+      const timer = setTimeout(() => {
+        playAudio(content.script);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [messages]);
 
   useEffect(() => {
     // Initialize Speech Recognition
@@ -54,6 +68,8 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
 
   const handleSend = () => {
     if (input.trim() && !isProcessing) {
+      // Stop any playing audio when user sends a message
+      window.speechSynthesis.cancel();
       onSendMessage(input);
       setInput('');
     }
@@ -67,6 +83,9 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
   };
 
   const toggleListening = () => {
+    // Stop audio if user wants to speak
+    window.speechSynthesis.cancel();
+    
     if (isListening) {
       recognitionRef.current?.stop();
     } else {
@@ -76,15 +95,33 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
   };
 
   const playAudio = (text: string) => {
+    window.speechSynthesis.cancel(); // Stop previous
     const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Try to find a Taiwan voice, fallback to any Chinese
+    const voices = window.speechSynthesis.getVoices();
+    const twVoice = voices.find(v => v.lang === 'zh-TW') || voices.find(v => v.lang.startsWith('zh'));
+    if (twVoice) utterance.voice = twVoice;
+    
     utterance.lang = 'zh-TW';
+    utterance.rate = 0.9; // Slightly slower for clearer learning
+
+    utterance.onstart = () => setIsPlaying(true);
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = () => setIsPlaying(false);
+
     window.speechSynthesis.speak(utterance);
   };
 
+  const stopAudio = () => {
+    window.speechSynthesis.cancel();
+    setIsPlaying(false);
+  };
+
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative">
+    <div className="flex flex-col h-full bg-slate-50 relative w-full">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-6 pb-24">
         {messages.map((msg) => {
           const isAi = msg.sender === 'ai';
           const content = msg.content;
@@ -92,7 +129,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
           if (isAi && typeof content !== 'string') {
             const aiContent = content as ChatResponse;
             return (
-              <div key={msg.id} className="flex flex-col items-start max-w-[90%]">
+              <div key={msg.id} className="flex flex-col items-start w-full max-w-[100%] sm:max-w-[90%]">
                 <div className="bg-white rounded-2xl rounded-tl-none p-4 shadow-md border border-slate-100 text-slate-800 w-full">
                    {/* Feedback Section */}
                    {aiContent.feedback && (
@@ -103,20 +140,21 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                   )}
 
                   {/* Main Script */}
-                  <div className="flex items-start gap-2 mb-1">
-                    <h3 className="text-xl font-bold font-serif text-slate-900 leading-relaxed">
+                  <div className="flex items-start gap-3 mb-2">
+                    <h3 className="text-lg sm:text-xl font-bold font-serif text-slate-900 leading-relaxed flex-1">
                       {aiContent.script}
                     </h3>
                     <button 
                       onClick={() => playAudio(aiContent.script)}
-                      className="p-1 text-slate-400 hover:text-teal-600 transition-colors"
+                      className="shrink-0 p-2 rounded-full bg-slate-100 text-teal-600 hover:bg-teal-100 transition-colors"
+                      title="Play Audio"
                     >
-                      <Volume2 size={16} />
+                      <Volume2 size={20} />
                     </button>
                   </div>
                   
                   {/* Pinyin */}
-                  <p className="text-teal-600 font-medium text-sm mb-2">{aiContent.pinyin}</p>
+                  <p className="text-teal-600 font-medium text-sm sm:text-base mb-2">{aiContent.pinyin}</p>
                   
                   {/* Translation */}
                   <p className="text-slate-600 text-sm">{aiContent.translation}</p>
@@ -128,7 +166,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                         <Lightbulb size={12} />
                         <span>Gợi ý trả lời:</span>
                       </div>
-                      <p className="text-slate-500 text-xs italic">{aiContent.suggestion}</p>
+                      <p className="text-slate-500 text-sm italic">{aiContent.suggestion}</p>
                     </div>
                   )}
                 </div>
@@ -136,8 +174,8 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
             );
           } else {
             return (
-              <div key={msg.id} className="flex justify-end">
-                <div className="bg-teal-600 text-white rounded-2xl rounded-tr-none px-4 py-3 shadow-md max-w-[85%]">
+              <div key={msg.id} className="flex justify-end w-full">
+                <div className="bg-teal-600 text-white rounded-2xl rounded-tr-none px-4 py-3 shadow-md max-w-[85%] sm:max-w-[80%] word-break-break-word">
                   <p className="text-base">{typeof content === 'string' ? content : ''}</p>
                 </div>
               </div>
@@ -156,11 +194,11 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
       </div>
 
       {/* Input Area */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 sm:p-4">
+      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-2 sm:p-4 z-20">
         <div className="max-w-3xl mx-auto flex items-end gap-2">
           <button
             onClick={toggleListening}
-            className={`p-3 rounded-full transition-all ${
+            className={`p-3 rounded-full transition-all shrink-0 ${
               isListening 
                 ? 'bg-red-100 text-red-600 animate-pulse ring-2 ring-red-400' 
                 : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -174,9 +212,9 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Nhập câu trả lời của bạn..."
+              placeholder="Nhập..."
               rows={1}
-              className="w-full bg-transparent border-none focus:outline-none resize-none max-h-32 text-slate-800 placeholder-slate-400"
+              className="w-full bg-transparent border-none focus:outline-none resize-none max-h-32 text-slate-800 placeholder-slate-400 text-base"
               style={{ minHeight: '24px' }}
             />
           </div>
@@ -184,7 +222,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
           <button
             onClick={handleSend}
             disabled={!input.trim() || isProcessing}
-            className="p-3 bg-teal-600 text-white rounded-full hover:bg-teal-700 disabled:opacity-50 disabled:hover:bg-teal-600 transition-all shadow-lg shadow-teal-200"
+            className="p-3 bg-teal-600 text-white rounded-full hover:bg-teal-700 disabled:opacity-50 disabled:hover:bg-teal-600 transition-all shadow-lg shadow-teal-200 shrink-0"
           >
             <Send size={24} />
           </button>

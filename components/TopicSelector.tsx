@@ -11,8 +11,8 @@ interface Props {
 
 export const TopicSelector: React.FC<Props> = ({ level, topics, isLoading, onSelect }) => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-8 text-center">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 animate-in slide-in-from-bottom-4 duration-500 w-full">
+      <div className="mb-6 md:mb-8 text-center">
         <span className="px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-sm font-medium mb-4 inline-block">
           Level {level}
         </span>
@@ -31,13 +31,22 @@ export const TopicSelector: React.FC<Props> = ({ level, topics, isLoading, onSel
             <button
               key={topic.id}
               onClick={() => onSelect(topic)}
-              className="p-6 bg-white border-2 border-slate-100 rounded-xl hover:border-teal-500 hover:shadow-md transition-all text-left group"
+              className="flex items-start p-4 md:p-6 bg-white border-2 border-slate-100 rounded-xl hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all text-left group w-full"
             >
-              <div className="flex items-center mb-2">
-                <MessageSquare className="text-teal-500 mr-2 group-hover:scale-110 transition-transform" size={20} />
-                <h3 className="font-bold text-lg text-slate-800">{topic.title}</h3>
+              <div className="flex-shrink-0 mt-1">
+                <MessageSquare className="text-teal-500 mr-4 group-hover:scale-110 transition-transform" size={24} />
               </div>
-              <p className="text-slate-500">{topic.description}</p>
+              <div className="flex flex-col gap-1">
+                <h3 className="font-bold text-lg md:text-xl text-slate-800 leading-tight">
+                  {topic.title}
+                </h3>
+                <div className="font-medium text-teal-700 text-base md:text-lg">
+                  {topic.vietnamese_title}
+                </div>
+                <p className="text-sm text-slate-500 mt-1 italic">
+                  "{topic.description}"
+                </p>
+              </div>
             </button>
           ))}
         </div>
