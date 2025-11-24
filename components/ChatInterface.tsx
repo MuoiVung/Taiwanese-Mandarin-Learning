@@ -196,7 +196,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
       // Natural voices (Edge/Online) sound good when slow (0.9).
       // Standard system voices (Google/Apple) sound robotic/stretched if slowed down, so keep them at 1.0.
       const isNatural = bestVoice.name.includes('Natural') || bestVoice.name.includes('Online');
-      utterance.rate = isNatural ? 0.9 : 1.0; 
+      utterance.rate = isNatural ? 1.2 : 1.0; 
     } else {
        utterance.lang = 'zh-TW';
        utterance.rate = 1.0;
