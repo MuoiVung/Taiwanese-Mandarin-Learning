@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({ apiKey });
 
 const SYSTEM_INSTRUCTION = `
 You are a friendly, patient Taiwanese Mandarin Conversation Partner (Female, ~25-30 years old).
-Your goal is to help Vietnamese users practice speaking reflexes from A1 to C2.
+Your goal is to help Vietnamese users practice speaking reflexes.
 
 CRITICAL INSTRUCTIONS FOR TONE AND STYLE (AI PERSONA):
 
@@ -16,42 +16,131 @@ CRITICAL INSTRUCTIONS FOR TONE AND STYLE (AI PERSONA):
    - Use daily life vocabulary (e.g., use "禮拜" instead of "星期", "我也覺得" instead of "本人認為", "計程車" instead of "出租車").
    - **Traditional Chinese (繁體中文)** ONLY.
 
-2. **Modal Particles (語助詞) - "LESS IS MORE"**:
-   - **DO NOT** add a particle to the end of every sentence. It sounds fake and robotic.
-   - Use them *only* for specific nuances:
-     * **喔 (o)**: Soft reminder or realization (e.g., "這樣不行喔").
-     * **啦 (la)**: Explaining, slight impatience, or urging (e.g., "是這樣啦").
-     * **耶 (ye)**: Surprise or happiness (e.g., "很好吃耶").
-     * **吧 (ba)**: Uncertainty or suggestion.
-   - **AVOID**: Overusing "捏 (ne)" (unless acting very cutesy/whiny, which is rarely needed).
+2. **STRICT LIMIT on Modal Particles (語助詞) - "CLEAN SPEAKING"**:
+   - **PROBLEM**: You are currently overusing particles (喔, 啦, 耶, 捏, 齁). It sounds annoying and fake.
+   - **NEW RULE**: In 90% of your sentences, **DO NOT** use a particle at the end. Just end with a period.
+   - **Strict Usage Guidelines**:
+     * **FORBIDDEN**: Do not use "喔", "耶", "捏", "啦" in simple statements. (e.g., Say "這是我的書。" NOT "這是我的書喔。")
+     * **ALLOWED**:
+       - "吧" (ba): Only for uncertainty or soft suggestions (e.g., "我們走吧").
+       - "嗎/呢" (ma/ne): For questions (e.g., "你呢？").
+       - "啊" (a): Only for exclamation or realization, use sparingly.
+   - **Tone**: Calm, helpful, direct. Not "cutesy" or overly enthusiastic.
 
 3. **Conversation Logic**:
    - **Concise First**: Get to the point. Answer the question or react directly first.
    - **Don't Lecture**: Avoid long paragraphs unless the user asks for a deep explanation (C1/C2).
    - **Flow**: Keep it conversational, not like a robot reading a script.
 
+4. **FEEDBACK PROTOCOL (CRITICAL)**:
+   - You act as a strict but helpful tutor.
+   - **Analyze EVERY user message** for grammar, vocabulary, unnatural phrasing, or Mainland vs. Taiwan usage differences.
+   - **If the user makes a mistake or sounds unnatural**: You MUST provide a specific correction in the 'feedback' field. Explain briefly why.
+     (e.g., "You said 'Wo bu zhi dao', naturally in Taiwan we say 'Wo bu xiao de'. Correct: ...")
+   - **If the user is correct**: Simply confirm with "Hao bang!", "Chuẩn rồi!", or "Nói rất tự nhiên!".
+
 The user is Vietnamese.
 `;
 
 const modelId = "gemini-2.5-flash";
 
-// Topic Banks Definition
-const TOPIC_BANKS: Record<string, string[]> = {
+// Topic Banks Definition - Expanded for variety
+const TOPIC_BANKS: Record<string, { category: string; topics: string[] }[]> = {
   'A1_A2': [
-    'Survival: Ordering food (Bubble tea, Hotpot, Chicken rice), Shopping (Bargaining, Asking size)',
-    'Survival: Asking for directions, Renting a house, Seeing a doctor',
-    'Daily Life: Family, Personal hobbies, A day at school/work',
-    'Culture: Night markets, Mid-Autumn Festival, Garbage collection culture, Queuing culture'
+    {
+      category: 'Survival (Sinh tồn)',
+      topics: [
+        'Ordering bubble tea (sugar/ice settings)', 
+        'Ordering Hotpot (meat selection, broth)', 
+        'Buying train tickets at HSR station', 
+        'Shopping at 7-Eleven (picking up packages, paying bills)',
+        'Asking for directions to the nearest MRT',
+        'Renting a YouBike',
+        'Seeing a doctor (stomach ache, cold)',
+        'Bargaining at a clothing shop'
+      ]
+    },
+    {
+      category: 'Daily Life (Đời sống)',
+      topics: [
+        'Self-introduction to a new neighbor', 
+        'Talking about family members', 
+        'Daily routine (school/work)', 
+        'Describing the weather (Typhoon days)', 
+        'Talking about hobbies (hiking, eating)',
+        'Making a reservation at a restaurant'
+      ]
+    },
+    {
+      category: 'Culture (Văn hóa)',
+      topics: [
+        'Night Market food tour', 
+        'Garbage collection truck culture (Why music?)', 
+        'Receipt Lottery (Fapiao) excitement', 
+        'Mid-Autumn Festival BBQ culture',
+        'Lunar New Year traditions',
+        'Queuing culture in MRT'
+      ]
+    }
   ],
   'B1_B2': [
-    'Emotions: Complaining about work, Sharing joy, Relationship advice, Life stress',
-    'Travel: Round-island trip (Hualien, Kenting), Camping, Hiking (Yangmingshan)',
-    'Society: Housing prices, Social media trends, Office culture/environment'
+    {
+      category: 'Emotions (Cảm xúc)',
+      topics: [
+        'Complaining about a boss/colleague', 
+        'Sharing good news (promotion)', 
+        'Relationship advice (breakup, dating)', 
+        'Life stress and burnout',
+        'Expressing disappointment',
+        'Encouraging a friend'
+      ]
+    },
+    {
+      category: 'Travel & Experience (Trải nghiệm)',
+      topics: [
+        'Planning a round-island trip (Huan Dao)', 
+        'Hiking Yangmingshan or Elephant Mountain', 
+        'Trip to Kenting/Hualien', 
+        'Camping trends in Taiwan',
+        'Visiting Jiufen Old Street',
+        'Hot spring experience in Beitou'
+      ]
+    },
+    {
+      category: 'Society (Xã hội)',
+      topics: [
+        'High housing prices in Taipei', 
+        'Office culture (Overtime)', 
+        'Social media trends (IG/Threads)', 
+        'Online shopping addiction',
+        'Convenience store culture importance',
+        'Scooter traffic in rush hour'
+      ]
+    }
   ],
   'C1_C2': [
-    'Deep/Specialized: Semiconductor economy (TSMC), Socio-politics',
-    'Deep/Specialized: Climate change, AI future',
-    'Abstract: Life philosophy, Gender equality, Future of education'
+    {
+      category: 'Deep/Specialized (Chuyên sâu)',
+      topics: [
+        'Semiconductor industry impact (TSMC)', 
+        'Economic challenges for youth', 
+        'Cross-strait relations impact on daily life', 
+        'Taiwan healthcare system pros/cons',
+        'Green energy and nuclear power debate',
+        'AI technology future'
+      ]
+    },
+    {
+      category: 'Abstract (Trừu tượng)',
+      topics: [
+        'Work-life balance philosophy', 
+        'Gender equality progress', 
+        'Future of education', 
+        'Minimalist lifestyle',
+        'Impact of globalization on local culture',
+        'Definition of success'
+      ]
+    }
   ]
 };
 
@@ -60,18 +149,30 @@ const getTopicPromptForLevel = (level: TOCFLLevel): string => {
   if (level === 'B1' || level === 'B2') bankKey = 'B1_B2';
   if (level === 'C1' || level === 'C2') bankKey = 'C1_C2';
   
+  // If Native, random selection or just fallback to advanced
+  if (level === 'Native') bankKey = 'C1_C2';
+  
   const categories = TOPIC_BANKS[bankKey];
-  // Select 3 random categories or mix them to ensure variety
+  
+  // Flatten topics for the prompt to give AI context
+  const contextString = categories.map(cat => `
+    Category: ${cat.category}
+    Examples: ${cat.topics.join(', ')}
+  `).join('\n');
+
   return `
-    Generate 3 distinct conversation topics for TOCFL Level ${level} in a Taiwanese context.
+    Generate 3 distinct conversation topics for TOCFL Level ${level === 'Native' ? 'Native/Advanced' : level} in a Taiwanese context.
     
-    You MUST select topics from these categories to ensure variety:
-    ${categories.join('\n')}
+    You MUST select topics from different categories provided below to ensure variety. 
+    DO NOT output 3 topics from the same category.
+    
+    Source Material:
+    ${contextString}
     
     Requirements:
     1. Title should include Chinese and Pinyin.
     2. Vietnamese Title must be a natural translation.
-    3. Ensure the topics are diverse (don't give 3 food topics).
+    3. Context/Description must be specific and interesting.
   `;
 };
 
@@ -134,8 +235,14 @@ export const generateVocabulary = async (level: TOCFLLevel, topic: string): Prom
     },
   };
 
+  const isNative = level === 'Native';
+  const levelPrompt = isNative 
+    ? "**NATIVE MODE**: Use authentic Taiwanese vocabulary, slang (流行語), and natural idioms. Do not simplify the language. The user wants to learn how people actually speak in Taiwan."
+    : `Target Level: **${level}**. Adjust vocabulary difficulty accordingly.`;
+
   const prompt = `
-    The user chose the topic: "${topic}" at Level ${level}.
+    The user chose the topic: "${topic}".
+    ${levelPrompt}
     List **10 to 15** most important vocabulary words or sentence patterns for this conversation.
     
     Requirements:
@@ -176,7 +283,7 @@ export const sendChatMessage = async (
     properties: {
       feedback: { 
         type: Type.STRING, 
-        description: "Correction of user's grammar (in Vietnamese/Pinyin). If correct, simply say 'Hao bang!'." 
+        description: "STRICT Feedback in Vietnamese. If user has error: 'Bạn nói [X], câu đúng là [Y]'. If correct: 'Hao bang!'." 
       },
       script: { 
         type: Type.STRING, 
@@ -211,18 +318,33 @@ export const sendChatMessage = async (
     required: ["feedback", "script", "pinyin", "translation", "segments"],
   };
 
+  const isNative = level === 'Native';
+  const instructionAddition = isNative
+    ? `
+      *** NATIVE/NATURAL MODE ACTIVATED ***
+      - The user has NOT set a specific level. 
+      - Speak like a **native Taiwanese local**.
+      - Use **Slang (流行語)**, natural speed, and idioms where appropriate.
+      - DO NOT simplify your sentence structure.
+      - Focus on being authentic and "down-to-earth" (接地氣).
+      - Still follow the rule of NOT overusing particles (喔/啦), but use them exactly where a native speaker would.
+      `
+    : `Current Context: Level ${level}. Keep vocabulary appropriate for this level.`;
+
   const chat = ai.chats.create({
     model: modelId,
     config: {
       systemInstruction: `${SYSTEM_INSTRUCTION}
-      Current Context: Level ${level}, Topic: "${topic}".
+      Topic: "${topic}".
+      ${instructionAddition}
       
       Protocol:
-      1. Analyze user input.
-      2. **Feedback**: If there is a grammar/vocabulary error, gently correct it in 'feedback'. If it is natural, praise briefly.
-      3. **Script**: Respond naturally to the context. 
-      4. **Segmentation**: You MUST break down your 'script' into the 'segments' array. Every character in the script must be covered by a segment.
-         Example: Script="今天天氣很好" -> segments=[{text:"今天", pinyin:"jīntiān", meaning:"hôm nay"}, {text:"天氣", pinyin:"tiānqì", meaning:"thời tiết"}, {text:"很好", pinyin:"hěn hǎo", meaning:"rất tốt"}]
+      1. **STRICT ANALYSIS**: Analyze user input for grammar errors, wrong word choice, or unnatural phrasing.
+      2. **Feedback Generation**:
+         - **IF ERROR**: You MUST correct it. Format: "Bạn nói [incorrect], người Đài thường nói [correct]. Vì [reason]."
+         - **IF CORRECT**: Praise briefly (e.g., "Câu này nói rất chuẩn!", "Hao bang!").
+      3. **Script**: Respond naturally to continue the conversation. **DO NOT OVERUSE PARTICLES like 喔/耶/啦**.
+      4. **Segmentation**: Break down 'script' into 'segments'.
       5. Provide 'pinyin' and 'translation' for the full sentence.
       6. **Engagement**: Always ask a follow-up question or give a prompt to keep the conversation moving.
       `,

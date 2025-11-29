@@ -12,8 +12,7 @@ import {
   MessageCircle, 
   BookA, 
   GraduationCap, 
-  Menu,
-  X
+  Menu
 } from 'lucide-react';
 
 export default function App() {
@@ -29,6 +28,7 @@ export default function App() {
   // History for Gemini context
   const [history, setHistory] = useState<{ role: string; parts: { text: string }[] }[]>([]);
 
+  // Flow 1: Standard Path (Select Level -> Get Topic Suggestions)
   const handleLevelSelect = async (selectedLevel: TOCFLLevel) => {
     setLevel(selectedLevel);
     setStage(AppStage.TOPIC_GENERATION);
@@ -53,6 +53,32 @@ export default function App() {
       setVocab(vocabulary);
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Flow 2: Custom Topic Path (Enter Topic -> Select Level -> Jump to Vocab)
+  const handleCustomStart = async (topicTitle: string, selectedLevel: TOCFLLevel) => {
+    setLevel(selectedLevel);
+    
+    // Create a temporary topic object
+    const customTopic: Topic = {
+      id: Date.now(),
+      title: topicTitle,
+      vietnamese_title: topicTitle, 
+      description: "Chủ đề tự chọn bởi người dùng"
+    };
+
+    setSelectedTopic(customTopic);
+    setIsLoading(true);
+    setStage(AppStage.VOCAB_PREP);
+    
+    try {
+      const vocabulary = await generateVocabulary(selectedLevel, topicTitle);
+      setVocab(vocabulary);
+    } catch (error) {
+      console.error("Error generating custom vocab:", error);
     } finally {
       setIsLoading(false);
     }
@@ -182,7 +208,7 @@ export default function App() {
           
           <NavItem 
             icon={LayoutDashboard} 
-            label="Chọn trình độ" 
+            label="Bắt đầu" 
             active={stage === AppStage.LEVEL_SELECTION}
             onClick={handleReset}
           />
@@ -190,7 +216,7 @@ export default function App() {
             icon={BookA} 
             label="Chọn chủ đề" 
             active={stage === AppStage.TOPIC_GENERATION || stage === AppStage.TOPIC_SELECTION}
-            disabled={stage === AppStage.LEVEL_SELECTION}
+            disabled={stage === AppStage.LEVEL_SELECTION || selectedTopic?.description === "Chủ đề tự chọn bởi người dùng"}
           />
           <NavItem 
             icon={BookA} 
@@ -238,7 +264,10 @@ export default function App() {
         {/* Content Container */}
         <div className="flex-1 overflow-hidden relative">
           {stage === AppStage.LEVEL_SELECTION && (
-            <LevelSelector onSelect={handleLevelSelect} />
+            <LevelSelector 
+              onSelect={handleLevelSelect} 
+              onCustomStart={handleCustomStart}
+            />
           )}
           
           {(stage === AppStage.TOPIC_GENERATION || stage === AppStage.TOPIC_SELECTION) && (
@@ -246,7 +275,7 @@ export default function App() {
               level={level} 
               topics={topics} 
               isLoading={stage === AppStage.TOPIC_GENERATION}
-              onSelect={handleTopicSelect} 
+              onSelect={handleTopicSelect}
             />
           )}
 

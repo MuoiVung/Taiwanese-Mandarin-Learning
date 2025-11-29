@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Topic, TOCFLLevel } from '../types';
-import { MessageSquare, Loader2, Sparkles } from 'lucide-react';
+import { MessageSquare, Loader2, ArrowRight } from 'lucide-react';
 
 interface Props {
   level: TOCFLLevel;
@@ -19,8 +19,8 @@ export const TopicSelector: React.FC<Props> = ({ level, topics, isLoading, onSel
             <span className="w-2 h-2 rounded-full bg-teal-500"></span>
             Current Level: {level}
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-2">Chủ đề hội thoại</h2>
-          <p className="text-lg text-slate-600">Chọn một tình huống để bắt đầu luyện tập phản xạ.</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-2">Chủ đề gợi ý</h2>
+          <p className="text-lg text-slate-600">Dưới đây là các chủ đề phù hợp với trình độ của bạn.</p>
         </div>
 
         {isLoading ? (
@@ -42,21 +42,21 @@ export const TopicSelector: React.FC<Props> = ({ level, topics, isLoading, onSel
                 </div>
 
                 <div className="mb-4 relative z-10">
-                   <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mb-4 group-hover:bg-teal-500 group-hover:text-white transition-colors">
-                      <Sparkles size={24} />
-                   </div>
-                   <h3 className="font-bold text-xl text-slate-900 mb-1 leading-tight group-hover:text-teal-700 transition-colors">
-                    {topic.title}
-                  </h3>
-                  <div className="text-lg text-teal-600 font-medium mb-3">
-                    {topic.vietnamese_title}
+                  <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mb-4 font-bold text-xl group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                    {topic.id}
                   </div>
-                </div>
-                
-                <div className="mt-auto pt-4 border-t border-slate-100 relative z-10">
-                  <p className="text-sm text-slate-500 italic">
-                    "{topic.description}"
+                  <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-teal-700 transition-colors leading-tight">
+                    {topic.vietnamese_title}
+                  </h3>
+                  <div className="text-sm text-teal-600 font-medium mb-2">{topic.title}</div>
+                  <p className="text-slate-500 text-sm line-clamp-3 leading-relaxed">
+                    {topic.description}
                   </p>
+                </div>
+
+                <div className="mt-auto relative z-10 pt-4 border-t border-slate-100 flex items-center text-teal-600 font-medium text-sm opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all">
+                  <span>Chọn chủ đề này</span>
+                  <ArrowRight size={16} className="ml-2" />
                 </div>
               </button>
             ))}
