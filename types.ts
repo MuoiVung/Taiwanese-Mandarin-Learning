@@ -31,6 +31,8 @@ export interface ChatResponse {
   translation: string;
   segments: Segment[]; // Array of words for interactive clicking
   suggestion?: string;
+  suggestion_pinyin?: string; // New: Pinyin for suggestion
+  suggestion_meaning?: string; // New: Vietnamese meaning for suggestion
 }
 
 export interface Message {

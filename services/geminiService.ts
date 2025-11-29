@@ -314,6 +314,14 @@ export const sendChatMessage = async (
         type: Type.STRING, 
         description: "A short suggested response for the user to say next (optional)." 
       },
+      suggestion_pinyin: {
+        type: Type.STRING,
+        description: "Pinyin for the suggested response."
+      },
+      suggestion_meaning: {
+        type: Type.STRING,
+        description: "Vietnamese meaning of the suggested response."
+      }
     },
     required: ["feedback", "script", "pinyin", "translation", "segments"],
   };
@@ -346,7 +354,8 @@ export const sendChatMessage = async (
       3. **Script**: Respond naturally to continue the conversation. **DO NOT OVERUSE PARTICLES like 喔/耶/啦**.
       4. **Segmentation**: Break down 'script' into 'segments'.
       5. Provide 'pinyin' and 'translation' for the full sentence.
-      6. **Engagement**: Always ask a follow-up question or give a prompt to keep the conversation moving.
+      6. **Suggestion**: Provide a relevant response the user can say next, including pinyin and meaning.
+      7. **Engagement**: Always ask a follow-up question or give a prompt to keep the conversation moving.
       `,
       responseMimeType: "application/json",
       responseSchema: schema,

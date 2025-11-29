@@ -27,6 +27,16 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea logic
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'; // Reset to shrink if needed
+      // 28px min height (1 row), 150px max height (~5 rows)
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
+    }
+  }, [input]);
 
   // 1. Debug Voices
   useEffect(() => {
@@ -348,7 +358,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                       </p>
                     )}
 
-                    {/* Suggestion */}
+                    {/* Suggestion - RICH UI */}
                     {aiContent.suggestion && (
                       <div className="mt-6 pt-4 border-t border-slate-100">
                         <div className="flex items-center gap-2 text-sm text-amber-600 font-bold uppercase tracking-wider mb-3">
@@ -357,10 +367,24 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                         </div>
                         <button 
                            onClick={() => setInput(aiContent.suggestion || '')}
-                           className="text-left text-slate-700 text-base md:text-lg italic bg-slate-50 hover:bg-slate-100 hover:text-teal-800 p-4 rounded-xl border border-slate-200 hover:border-teal-300 transition-all w-full group flex items-center justify-between shadow-sm"
+                           className="text-left w-full group flex flex-col items-start bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-teal-300 p-4 rounded-xl transition-all shadow-sm relative overflow-hidden"
                         >
-                          <span>"{aiContent.suggestion}"</span>
-                          <ChevronRight size={20} className="opacity-0 group-hover:opacity-100 text-teal-500 transition-all transform group-hover:translate-x-1" />
+                          <div className="flex items-center justify-between w-full mb-1">
+                             <span className="text-xl font-bold text-slate-800 font-serif">{aiContent.suggestion}</span>
+                             <ChevronRight size={20} className="text-teal-500 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                          </div>
+                          
+                          {showPinyin && aiContent.suggestion_pinyin && (
+                            <span className="text-sm text-teal-600 font-medium mb-1">
+                              {aiContent.suggestion_pinyin}
+                            </span>
+                          )}
+                          
+                          {aiContent.suggestion_meaning && (
+                             <span className="text-sm text-slate-500 italic border-t border-slate-200/50 pt-1 mt-1 w-full block">
+                               {aiContent.suggestion_meaning}
+                             </span>
+                          )}
                         </button>
                       </div>
                     )}
@@ -403,22 +427,23 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
             <Mic size={24} />
           </button>
           
-          <div className="flex-1 bg-slate-100 rounded-2xl px-5 py-3 flex items-center focus-within:ring-2 focus-within:ring-teal-500 transition-all border border-transparent focus-within:border-teal-500 focus-within:bg-white">
+          <div className="flex-1 bg-slate-100 rounded-2xl px-5 py-3 flex items-center focus-within:ring-2 focus-within:ring-teal-500 transition-all border border-transparent focus-within:border-teal-500 focus-within:bg-white relative">
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Nhập tin nhắn..."
               rows={1}
-              className="w-full bg-transparent border-none focus:outline-none resize-none max-h-32 text-slate-800 placeholder-slate-400 text-base md:text-lg"
-              style={{ minHeight: '28px' }}
+              className="w-full bg-transparent border-none focus:outline-none resize-none text-slate-800 placeholder-slate-400 text-base md:text-lg overflow-y-auto"
+              style={{ minHeight: '28px', maxHeight: '150px' }}
             />
           </div>
 
           <button
             onClick={handleSend}
             disabled={!input.trim() || isProcessing}
-            className="p-4 bg-teal-600 text-white rounded-xl hover:bg-teal-700 disabled:opacity-50 disabled:hover:bg-teal-600 transition-all shadow-lg shadow-teal-100 shrink-0 flex items-center justify-center"
+            className="p-4 bg-teal-600 text-white rounded-xl hover:bg-teal-700 disabled:opacity-50 disabled:hover:bg-teal-600 transition-all shadow-lg shadow-teal-100 shrink-0 flex items-center justify-center h-[56px]"
           >
             <Send size={24} />
           </button>
