@@ -53,9 +53,11 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
     };
   }, []);
 
+  // Fix: Only scroll when messages list changes or processing status changes.
+  // Removed showPinyin, showTranslation, selectedSegmentId to prevent jumping while reading.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isProcessing, showPinyin, showTranslation, selectedSegmentId]);
+  }, [messages, isProcessing]);
 
   // Auto-play functionality
   useEffect(() => {
