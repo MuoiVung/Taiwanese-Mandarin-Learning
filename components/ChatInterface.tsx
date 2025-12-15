@@ -43,7 +43,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
     const logVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
-        // console.log("Voices loaded", voices.map(v => v.name));
+        // console.log("Voices loaded", voices.map(v => `${v.name} (${v.lang})`));
       }
     };
     window.speechSynthesis.onvoiceschanged = logVoices;
@@ -54,7 +54,6 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
   }, []);
 
   // Fix: Only scroll when messages list changes or processing status changes.
-  // Removed showPinyin, showTranslation, selectedSegmentId to prevent jumping while reading.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isProcessing]);
@@ -161,38 +160,37 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
   };
 
   const getBestVoice = (voices: SpeechSynthesisVoice[]) => {
-    const zhVoices = voices.filter(v => v.lang.toLowerCase().includes('zh'));
+    // 1. Broad filter for any Chinese/Mandarin voice (zh, cmn, zho)
+    const zhVoices = voices.filter(v => {
+        const lang = v.lang.toLowerCase().replace('_', '-');
+        return lang.includes('zh') || lang.includes('cmn') || lang.includes('zho');
+    });
     
-    // Priority 1: Microsoft Edge Natural Voices (Taiwan) - Best quality overall
-    const msNaturalTw = zhVoices.find(v => 
-      v.name.includes('HsiaoChen') || v.name.includes('YunJhe')
-    );
-    if (msNaturalTw) return msNaturalTw;
+    // 2. Desktop High Quality (Edge/Online)
+    const msNatural = zhVoices.find(v => v.name.includes('HsiaoChen') || v.name.includes('YunJhe'));
+    if (msNatural) return msNatural;
 
-    // Priority 2: Apple Mei-Jia (macOS) - Better than Google Standard on Mac
-    const appleTw = zhVoices.find(v => v.name.includes('Mei-Jia'));
-    if (appleTw) return appleTw;
+    // 3. macOS / iOS High Quality
+    const apple = zhVoices.find(v => v.name.includes('Mei-Jia') || v.name.includes('Sin-Ji'));
+    if (apple) return apple;
 
-    // Priority 3: Google Chrome Standard Voice (Taiwan)
-    const googleTw = zhVoices.find(v => 
-      v.name.includes('Google') && (v.lang.includes('TW') || v.name.includes('台灣'))
-    );
-    if (googleTw) return googleTw;
+    // 4. Android/Chrome General Strategy (Prioritize TW region)
+    // Android often uses 'cmn-TW' or 'zh_TW' or 'zho-TW'
+    const twVoices = zhVoices.filter(v => {
+        const lang = v.lang.toLowerCase().replace('_', '-');
+        return lang.includes('tw') || v.name.includes('Taiwan') || v.name.includes('台灣');
+    });
 
-    // Priority 4: Microsoft Online
-    const msOnline = zhVoices.find(v => 
-      v.name.includes('Microsoft') && v.name.includes('Online')
-    );
-    if (msOnline) return msOnline;
-    
-    // Priority 5: Fallback
-    const stdTw = zhVoices.find(v => v.lang === 'zh-TW' || v.lang === 'zh_TW');
-    if (stdTw) return stdTw;
+    if (twVoices.length > 0) {
+        // Try to find a "Google" or "Network" voice first (better quality)
+        const highQualityTw = twVoices.find(v => 
+            v.name.includes('Google') || v.name.includes('Network') || v.name.includes('Online')
+        );
+        return highQualityTw || twVoices[0];
+    }
 
-    const stdCn = zhVoices.find(v => v.lang === 'zh-CN' || v.lang === 'zh_CN');
-    if (stdCn) return stdCn;
-
-    return zhVoices[0];
+    // 5. Fallback to Mainland Chinese if no TW available (Better than English)
+    return zhVoices.find(v => v.lang.toLowerCase().includes('cn')) || zhVoices[0];
   };
 
   const playAudio = (text: string) => {
@@ -203,15 +201,16 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
 
     if (bestVoice) {
       utterance.voice = bestVoice;
+      utterance.lang = bestVoice.lang; // CRITICAL: Use the voice's exact lang code (e.g. cmn-TW)
       
       // Smart Rate Adjustment
-      // Natural voices (Edge/Online) sound good when slow (0.9).
-      // Standard system voices (Google/Apple) sound robotic/stretched if slowed down, so keep them at 1.0.
       const isNatural = bestVoice.name.includes('Natural') || bestVoice.name.includes('Online');
-      utterance.rate = isNatural ? 1.2 : 1.0; 
+      utterance.rate = isNatural ? 0.9 : 1.0; 
     } else {
-       utterance.lang = 'zh-TW';
-       utterance.rate = 1.0;
+      // LAST RESORT: Force system to use Taiwan Mandarin if no specific voice object matches
+      // This forces Android to look up its internal engine for 'zh-TW'
+      utterance.lang = 'zh-TW'; 
+      utterance.rate = 1.0;
     }
     
     utterance.pitch = 1.0;
@@ -269,20 +268,36 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                       {aiContent.feedback && (
                         <div className={`px-5 py-4 text-base leading-relaxed ${isCorrection ? 'text-amber-900 border-b border-amber-100/50' : 'text-teal-700'}`}>
                             {isCorrection ? (
-                              <div className="flex gap-3">
-                                <span className="text-xl shrink-0">💡</span>
-                                <span className="font-medium">{aiContent.feedback}</span>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex gap-3">
+                                  <span className="text-xl shrink-0">💡</span>
+                                  <span className="font-medium">{aiContent.feedback}</span>
+                                </div>
+                                {/* FEEDBACK PINYIN - TOGGLED */}
+                                {showPinyin && aiContent.feedback_pinyin && (
+                                  <div className="ml-8 text-sm font-medium text-amber-700/80 font-mono">
+                                    {aiContent.feedback_pinyin}
+                                  </div>
+                                )}
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2 font-bold">
-                                <span className="text-lg">✨</span>
-                                <span>{aiContent.feedback}</span>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2 font-bold">
+                                  <span className="text-lg">✨</span>
+                                  <span>{aiContent.feedback}</span>
+                                </div>
+                                {/* FEEDBACK PINYIN (PRAISE) - TOGGLED */}
+                                {showPinyin && aiContent.feedback_pinyin && (
+                                  <div className="ml-8 text-sm font-medium text-teal-600/80 font-mono">
+                                    {aiContent.feedback_pinyin}
+                                  </div>
+                                )}
                               </div>
                             )}
                         </div>
                       )}
                       
-                      {/* Controls Row (Optional: Only show if needed or keep sticky) */}
+                      {/* Controls Row */}
                       <div className="flex items-center justify-end px-4 py-2 bg-white/50 backdrop-blur-sm gap-2">
                          <button 
                             onClick={() => setShowPinyin(!showPinyin)}

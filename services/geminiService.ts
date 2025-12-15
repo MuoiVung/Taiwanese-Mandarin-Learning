@@ -39,7 +39,7 @@ CRITICAL INSTRUCTIONS FOR TONE AND STYLE (AI PERSONA):
      - **SCENARIO A: Error or Unnatural Phrasing**:
        * You MUST return a correction.
        * **Format**: "⚠️ [Point out error/unnatural part] -> [Correct/Better Phrasing in Traditional Chinese]. [Short Vietnamese Explanation]."
-       * **IMPORTANT**: **DO NOT** include Pinyin in the 'feedback' field. Keep it clean for the UI.
+       * **IMPORTANT**: **DO NOT** include Pinyin in the 'feedback' text field. Put Pinyin in the 'feedback_pinyin' field.
        * *Example*: "⚠️ Bạn dùng 'ma' ở đây là thừa. -> Câu tự nhiên: 你去哪裡？ Giải thích: Câu hỏi có từ để hỏi rồi thì không cần 'ma' nữa."
      - **SCENARIO B: Perfect & Natural**:
        * Return a short praise in Vietnamese or Chinese (Randomize it).
@@ -292,6 +292,10 @@ export const sendChatMessage = async (
         type: Type.STRING, 
         description: "STRICT Vietnamese Feedback. IF ERROR: '⚠️ [Error] -> [Correction in Trad. Chinese]. [Reason]'. IF CORRECT: 'Hao bang!', etc. NO PINYIN HERE." 
       },
+      feedback_pinyin: {
+        type: Type.STRING,
+        description: "Pinyin ONLY for the Chinese text within the feedback (especially the correction part). If feedback is just praise, provide Pinyin for the praise."
+      },
       script: { 
         type: Type.STRING, 
         description: "The AI's response in Traditional Chinese. Conversational, natural flow." 
@@ -356,9 +360,12 @@ export const sendChatMessage = async (
       Protocol:
       1. **STRICT ANALYSIS (MANDATORY)**: You must check every input for grammar, unnatural phrasing, or weird usage.
       2. **Feedback Generation Rules**:
-         - **IF ERROR/UNNATURAL**: Format: "⚠️ [Error/Issue] -> [Correction in Trad. Chinese]. [Short Explanation]." 
-           (DO NOT PUT PINYIN IN FEEDBACK).
-         - **IF CORRECT**: Output random praise (e.g., "Hao bang!", "Nói rất chuẩn!").
+         - **IF ERROR/UNNATURAL**: 
+            - feedback: "⚠️ [Error/Issue] -> [Correction in Trad. Chinese]. [Short Explanation in VN]." (No Pinyin)
+            - feedback_pinyin: "[Pinyin for the correction part]"
+         - **IF CORRECT**: 
+            - feedback: Random praise (e.g., "Hao bang!", "Nói rất chuẩn!").
+            - feedback_pinyin: Pinyin for the praise if it is in Chinese.
       3. **Script**: Respond naturally to continue conversation.
       4. **Segmentation**: Break down 'script' into interactive segments.
       5. Provide pinyin/translation for the full sentence.
@@ -380,6 +387,7 @@ export const sendChatMessage = async (
     console.error("Chat error:", error);
     return {
       feedback: "Lỗi kết nối",
+      feedback_pinyin: "Liánxiàn cuòwù",
       script: "哎呀，網絡好像有點卡住耶，再試一次好嗎？",
       pinyin: "Āiyā, wǎngluò hǎoxiàng yǒu diǎn kǎ zhù ye, zài shì yīcì hǎo ma?",
       translation: "Ui da, mạng có vẻ hơi lag nè, thử lại lần nữa được không?",
