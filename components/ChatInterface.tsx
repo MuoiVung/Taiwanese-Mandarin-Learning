@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Message, ChatResponse, Segment } from '../types';
 import { Mic, Send, Volume2, Lightbulb, StopCircle, Eye, EyeOff, Languages, ChevronRight } from 'lucide-react';
+import { playTTS, stopTTS } from '../utils/tts';
 
 interface Props {
   messages: Message[];
@@ -38,18 +39,14 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
     }
   }, [input]);
 
-  // 1. Debug Voices
+  // 1. Debug Voices (via util or here, but effect is needed to ensure voices load)
   useEffect(() => {
-    const logVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        // console.log("Voices loaded", voices.map(v => `${v.name} (${v.lang})`));
-      }
-    };
-    window.speechSynthesis.onvoiceschanged = logVoices;
-    logVoices();
+    const initVoices = () => window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = initVoices;
+    initVoices();
     return () => {
       window.speechSynthesis.onvoiceschanged = null;
+      stopTTS();
     };
   }, []);
 
@@ -64,7 +61,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
     if (lastMsg && lastMsg.sender === 'ai' && typeof lastMsg.content !== 'string') {
       const content = lastMsg.content as ChatResponse;
       const timer = setTimeout(() => {
-        playAudio(content.script);
+        handlePlayAudio(content.script);
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -81,7 +78,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
 
   const handleSend = () => {
     if (input.trim() && !isProcessing) {
-      window.speechSynthesis.cancel();
+      stopTTS();
       onSendMessage(input);
       setInput('');
       setSelectedSegmentId(null); // Reset selection
@@ -151,7 +148,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
   };
 
   const toggleListening = () => {
-    window.speechSynthesis.cancel();
+    stopTTS();
     if (isListening) {
       stopListening();
     } else {
@@ -159,74 +156,17 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
     }
   };
 
-  const getBestVoice = (voices: SpeechSynthesisVoice[]) => {
-    // 1. Broad filter for any Chinese/Mandarin voice (zh, cmn, zho)
-    const zhVoices = voices.filter(v => {
-        const lang = v.lang.toLowerCase().replace('_', '-');
-        return lang.includes('zh') || lang.includes('cmn') || lang.includes('zho');
-    });
-    
-    // 2. Desktop High Quality (Edge/Online)
-    const msNatural = zhVoices.find(v => v.name.includes('HsiaoChen') || v.name.includes('YunJhe'));
-    if (msNatural) return msNatural;
-
-    // 3. macOS / iOS High Quality
-    const apple = zhVoices.find(v => v.name.includes('Mei-Jia') || v.name.includes('Sin-Ji'));
-    if (apple) return apple;
-
-    // 4. Android/Chrome General Strategy (Prioritize TW region)
-    // Android often uses 'cmn-TW' or 'zh_TW' or 'zho-TW'
-    const twVoices = zhVoices.filter(v => {
-        const lang = v.lang.toLowerCase().replace('_', '-');
-        return lang.includes('tw') || v.name.includes('Taiwan') || v.name.includes('台灣');
-    });
-
-    if (twVoices.length > 0) {
-        // Try to find a "Google" or "Network" voice first (better quality)
-        const highQualityTw = twVoices.find(v => 
-            v.name.includes('Google') || v.name.includes('Network') || v.name.includes('Online')
-        );
-        return highQualityTw || twVoices[0];
-    }
-
-    // 5. Fallback to Mainland Chinese if no TW available (Better than English)
-    return zhVoices.find(v => v.lang.toLowerCase().includes('cn')) || zhVoices[0];
+  const handlePlayAudio = (text: string) => {
+    playTTS(
+      text, 
+      () => setIsPlaying(true), 
+      () => setIsPlaying(false),
+      (e) => { console.error("TTS Error", e); setIsPlaying(false); }
+    );
   };
 
-  const playAudio = (text: string) => {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const bestVoice = getBestVoice(voices);
-
-    if (bestVoice) {
-      utterance.voice = bestVoice;
-      utterance.lang = bestVoice.lang; // CRITICAL: Use the voice's exact lang code (e.g. cmn-TW)
-      
-      // Smart Rate Adjustment
-      const isNatural = bestVoice.name.includes('Natural') || bestVoice.name.includes('Online');
-      utterance.rate = isNatural ? 0.9 : 1.0; 
-    } else {
-      // LAST RESORT: Force system to use Taiwan Mandarin if no specific voice object matches
-      // This forces Android to look up its internal engine for 'zh-TW'
-      utterance.lang = 'zh-TW'; 
-      utterance.rate = 1.0;
-    }
-    
-    utterance.pitch = 1.0;
-
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = (e) => {
-        console.error("TTS Error:", e);
-        setIsPlaying(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const stopAudio = () => {
-    window.speechSynthesis.cancel();
+  const handleStopAudio = () => {
+    stopTTS();
     setIsPlaying(false);
   };
 
@@ -266,16 +206,60 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                    <div className={`flex flex-col border-b rounded-t-2xl overflow-hidden ${isCorrection ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-100'}`}>
                       {/* Feedback Area */}
                       {aiContent.feedback && (
-                        <div className={`px-5 py-4 text-base leading-relaxed ${isCorrection ? 'text-amber-900 border-b border-amber-100/50' : 'text-teal-700'}`}>
+                        <div className={`px-5 py-4 ${isCorrection ? 'text-amber-900 border-b border-amber-100/50' : 'text-teal-700'}`}>
                             {isCorrection ? (
-                              <div className="flex flex-col gap-1">
+                              <div className="flex flex-col gap-2">
                                 <div className="flex gap-3">
-                                  <span className="text-xl shrink-0">💡</span>
-                                  <span className="font-medium">{aiContent.feedback}</span>
+                                  <span className="text-2xl shrink-0">💡</span>
+                                  {/* Increased Font Size for Feedback Text */}
+                                  <span className="font-medium text-lg md:text-xl leading-relaxed">{aiContent.feedback}</span>
                                 </div>
-                                {/* FEEDBACK PINYIN - TOGGLED */}
+                                
+                                {/* INTERACTIVE FEEDBACK SEGMENTS (Correction) */}
+                                {aiContent.feedback_segments && aiContent.feedback_segments.length > 0 && (
+                                  <div className="ml-9 mt-2 p-3 bg-white/60 rounded-xl border border-amber-100">
+                                    <div className="text-xs font-bold text-amber-500 uppercase mb-2">Chi tiết câu sửa (Ấn để xem):</div>
+                                    <div className="flex flex-wrap gap-x-1 gap-y-2">
+                                      {aiContent.feedback_segments.map((seg, idx) => {
+                                         const segmentId = `feedback-${msg.id}-${idx}`;
+                                         const isSelected = selectedSegmentId === segmentId;
+                                         
+                                         return (
+                                           <span 
+                                             key={idx}
+                                             className={`interactive-segment relative cursor-pointer px-1 -mx-1 rounded transition-colors duration-200 group
+                                               ${isSelected ? 'bg-amber-800 text-white z-20' : 'hover:bg-amber-100 text-slate-900'}
+                                             `}
+                                             onClick={(e) => {
+                                               e.stopPropagation();
+                                               setSelectedSegmentId(isSelected ? null : segmentId);
+                                             }}
+                                           >
+                                             <span className="text-xl md:text-2xl font-serif font-bold">
+                                               {seg.text}
+                                             </span>
+                                             
+                                             {/* Popover */}
+                                             {isSelected && (
+                                               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max max-w-[200px] z-50">
+                                                  <div className="bg-slate-900 text-white text-sm rounded-xl py-3 px-4 shadow-xl flex flex-col items-center gap-1 animate-in fade-in zoom-in duration-200">
+                                                     <div className="font-bold text-lg leading-none">{seg.text}</div>
+                                                     <div className="text-teal-400 font-medium">{seg.pinyin}</div>
+                                                     <div className="text-slate-300 text-xs border-t border-slate-700 pt-1 mt-1">{seg.meaning}</div>
+                                                     <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45"></div>
+                                                  </div>
+                                               </div>
+                                             )}
+                                           </span>
+                                         );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Fallback Text Pinyin */}
                                 {showPinyin && aiContent.feedback_pinyin && (
-                                  <div className="ml-8 text-sm font-medium text-amber-700/80 font-mono">
+                                  <div className="ml-9 text-base font-medium text-amber-700/80 font-mono">
                                     {aiContent.feedback_pinyin}
                                   </div>
                                 )}
@@ -283,12 +267,12 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                             ) : (
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2 font-bold">
-                                  <span className="text-lg">✨</span>
-                                  <span>{aiContent.feedback}</span>
+                                  <span className="text-xl">✨</span>
+                                  {/* Increased Font Size for Praise */}
+                                  <span className="text-lg md:text-xl">{aiContent.feedback}</span>
                                 </div>
-                                {/* FEEDBACK PINYIN (PRAISE) - TOGGLED */}
                                 {showPinyin && aiContent.feedback_pinyin && (
-                                  <div className="ml-8 text-sm font-medium text-teal-600/80 font-mono">
+                                  <div className="ml-8 text-base font-medium text-teal-600/80 font-mono">
                                     {aiContent.feedback_pinyin}
                                   </div>
                                 )}
@@ -314,7 +298,7 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                              <Languages size={18} />
                           </button>
                           <button 
-                            onClick={() => isPlaying ? stopAudio() : playAudio(aiContent.script)}
+                            onClick={() => isPlaying ? handleStopAudio() : handlePlayAudio(aiContent.script)}
                             className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${isPlaying ? 'text-teal-600 bg-teal-50 animate-pulse' : 'text-slate-400 hover:text-teal-600 hover:bg-slate-100'}`}
                           >
                             {isPlaying ? <StopCircle size={18} /> : <Volume2 size={18} />}
@@ -351,7 +335,6 @@ export const ChatInterface: React.FC<Props> = ({ messages, isProcessing, onSendM
                                      <div className="font-bold text-lg leading-none">{seg.text}</div>
                                      <div className="text-teal-400 font-medium">{seg.pinyin}</div>
                                      <div className="text-slate-300 text-xs border-t border-slate-700 pt-1 mt-1">{seg.meaning}</div>
-                                     {/* Tooltip Arrow */}
                                      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45"></div>
                                   </div>
                                </div>

@@ -26,7 +26,8 @@ export interface Segment {
 
 export interface ChatResponse {
   feedback: string;
-  feedback_pinyin?: string; // New: Pinyin for the feedback content (correction)
+  feedback_pinyin?: string; // Pinyin for the feedback content
+  feedback_segments?: Segment[]; // New: Interactive segments for the correction part of feedback
   script: string;
   pinyin: string;
   translation: string;

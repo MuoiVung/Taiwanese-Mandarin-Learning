@@ -294,7 +294,20 @@ export const sendChatMessage = async (
       },
       feedback_pinyin: {
         type: Type.STRING,
-        description: "Pinyin ONLY for the Chinese text within the feedback (especially the correction part). If feedback is just praise, provide Pinyin for the praise."
+        description: "Pinyin ONLY for the Chinese text within the feedback (especially the correction part)."
+      },
+      feedback_segments: {
+        type: Type.ARRAY,
+        description: "IF providing a correction in Chinese, break that specific correction sentence down into interactive segments here. Otherwise leave empty.",
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            text: { type: Type.STRING },
+            pinyin: { type: Type.STRING },
+            meaning: { type: Type.STRING }
+          },
+          required: ["text", "pinyin", "meaning"]
+        }
       },
       script: { 
         type: Type.STRING, 
@@ -361,11 +374,13 @@ export const sendChatMessage = async (
       1. **STRICT ANALYSIS (MANDATORY)**: You must check every input for grammar, unnatural phrasing, or weird usage.
       2. **Feedback Generation Rules**:
          - **IF ERROR/UNNATURAL**: 
-            - feedback: "⚠️ [Error/Issue] -> [Correction in Trad. Chinese]. [Short Explanation in VN]." (No Pinyin)
+            - feedback: "⚠️ [Error] -> [Correction in Trad. Chinese]. [Short Explanation]."
             - feedback_pinyin: "[Pinyin for the correction part]"
+            - feedback_segments: [Break down the Correction sentence into words/phrases for interactive clicking]
          - **IF CORRECT**: 
-            - feedback: Random praise (e.g., "Hao bang!", "Nói rất chuẩn!").
-            - feedback_pinyin: Pinyin for the praise if it is in Chinese.
+            - feedback: Random praise.
+            - feedback_pinyin: Pinyin for the praise.
+            - feedback_segments: []
       3. **Script**: Respond naturally to continue conversation.
       4. **Segmentation**: Break down 'script' into interactive segments.
       5. Provide pinyin/translation for the full sentence.

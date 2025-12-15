@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { VocabularyItem, Topic } from '../types';
-import { BookOpen, ArrowRight, Loader2, Volume2, Quote } from 'lucide-react';
+import { BookOpen, ArrowRight, Loader2, Volume2, Quote, PlayCircle } from 'lucide-react';
+import { playTTS, stopTTS } from '../utils/tts';
 
 interface Props {
   topic: Topic;
@@ -11,6 +12,29 @@ interface Props {
 }
 
 export const VocabPrep: React.FC<Props> = ({ topic, vocab, isLoading, onStart }) => {
+  const [playingItem, setPlayingItem] = useState<string | null>(null);
+
+  // Initialize voices on mount
+  useEffect(() => {
+    const initVoices = () => window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = initVoices;
+    initVoices();
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      stopTTS();
+    };
+  }, []);
+
+  const handlePlay = (text: string, id: string) => {
+    if (playingItem === id) {
+      stopTTS();
+      setPlayingItem(null);
+    } else {
+      setPlayingItem(id);
+      playTTS(text, undefined, () => setPlayingItem(null));
+    }
+  };
+
   return (
     <div className="h-full flex flex-col w-full relative">
       {/* Scrollable Content */}
@@ -43,35 +67,58 @@ export const VocabPrep: React.FC<Props> = ({ topic, vocab, isLoading, onStart })
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {vocab.map((item, idx) => (
-                <div key={idx} className="group bg-white rounded-2xl border border-slate-200 hover:border-teal-400 hover:shadow-lg transition-all flex flex-col overflow-hidden">
-                  {/* Main Word Section */}
-                  <div className="p-5 pb-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="text-3xl font-bold text-slate-800 font-serif group-hover:text-teal-700 transition-colors">
-                        {item.chinese}
+              {vocab.map((item, idx) => {
+                const wordId = `word-${idx}`;
+                const exampleId = `ex-${idx}`;
+                
+                return (
+                  <div key={idx} className="group bg-white rounded-2xl border border-slate-200 hover:border-teal-400 hover:shadow-lg transition-all flex flex-col overflow-hidden">
+                    {/* Main Word Section */}
+                    <div className="p-5 pb-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-3">
+                           <div className="text-4xl font-bold text-slate-800 font-serif group-hover:text-teal-700 transition-colors leading-tight">
+                             {item.chinese}
+                           </div>
+                           <button 
+                             onClick={() => handlePlay(item.chinese, wordId)}
+                             className={`p-2 rounded-full transition-all ${playingItem === wordId ? 'text-teal-600 bg-teal-50' : 'text-slate-300 hover:text-teal-500 hover:bg-slate-50'}`}
+                           >
+                             <Volume2 size={24} className={playingItem === wordId ? 'animate-pulse' : ''} />
+                           </button>
+                        </div>
+                        <div className="text-xs font-bold text-slate-300">#{idx + 1}</div>
                       </div>
-                      <div className="text-xs font-bold text-slate-300">#{idx + 1}</div>
+                      <div className="text-xl text-teal-600 font-medium tracking-wide mb-2">
+                        {item.pinyin}
+                      </div>
+                      <div className="text-lg text-slate-700 font-medium border-t border-slate-100 pt-2">
+                        {item.vietnamese}
+                      </div>
                     </div>
-                    <div className="text-lg text-teal-600 font-medium tracking-wide mb-2">
-                      {item.pinyin}
-                    </div>
-                    <div className="text-slate-700 font-medium border-t border-slate-100 pt-2">
-                      {item.vietnamese}
-                    </div>
-                  </div>
 
-                  {/* Example Section */}
-                  <div className="mt-auto bg-slate-50 p-4 border-t border-slate-100 text-sm">
-                    <div className="flex gap-2 mb-1">
-                      <Quote size={14} className="text-slate-400 shrink-0 mt-1" />
-                      <div className="font-medium text-slate-700">{item.example}</div>
+                    {/* Example Section */}
+                    <div className="mt-auto bg-slate-50 p-4 border-t border-slate-100">
+                      <div className="flex items-start gap-3 mb-2">
+                        <Quote size={16} className="text-slate-400 shrink-0 mt-1.5" />
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-800 text-xl leading-relaxed mb-1">
+                            {item.example}
+                          </div>
+                          <div className="text-sm text-teal-600 mb-1">{item.example_pinyin}</div>
+                          <div className="text-sm text-slate-500 italic">{item.example_meaning}</div>
+                        </div>
+                        <button 
+                             onClick={() => handlePlay(item.example, exampleId)}
+                             className={`p-1.5 rounded-full transition-all shrink-0 mt-1 ${playingItem === exampleId ? 'text-teal-600 bg-teal-100' : 'text-slate-300 hover:text-teal-500 hover:bg-white'}`}
+                           >
+                             <Volume2 size={20} className={playingItem === exampleId ? 'animate-pulse' : ''} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="pl-6 text-slate-500 mb-1 italic text-xs">{item.example_pinyin}</div>
-                    <div className="pl-6 text-slate-500 text-xs border-t border-slate-200 pt-1 mt-1">{item.example_meaning}</div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
